@@ -49,7 +49,18 @@ pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, mil
     contract.milestones = milestones;
     contract.rejection_reasons = reasons;
 
-    // Move client's SOL into the vault
+    // The vault is a bare System-owned PDA (no account data of its own), so it needs
+    // its own rent-exempt reserve independent of the escrowed `amount`. Without this,
+    // a small `amount` (e.g. a few lamports) would leave the vault above zero but
+    // below the rent-exempt floor after the transfer, which the runtime rejects
+    // outright with "insufficient funds for rent".
+    //
+    // We fund the vault with `amount` (fully paid out across milestone approvals)
+    // plus a fixed rent-exempt reserve that is never paid out and keeps the vault
+    // account alive at exactly that reserve once every milestone has been approved.
+    let rent_exempt_reserve = Rent::get()?.minimum_balance(0);
+
+    // Move client's SOL into the vault: escrowed amount + permanent rent reserve.
     let cpi_ctx = CpiContext::new(
         ctx.accounts.system_program.key(),
         Transfer {
@@ -57,7 +68,7 @@ pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, mil
             to: ctx.accounts.vault.to_account_info(),
         },
     );
-    transfer(cpi_ctx, amount)?;
+    transfer(cpi_ctx, amount + rent_exempt_reserve)?;
 
     Ok(())
 }
