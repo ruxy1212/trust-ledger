@@ -1,0 +1,318 @@
+Compiling trust-ledger v0.1.0 (/mnt/c/laragon/www/react/ideas/solana-100/counter/programs/trust-ledger)
+error: the payer specified for an init constraint must be mutable.
+  --> programs/trust-ledger/src/instructions/raise_dispute.rs:22:9
+   |
+22 |     pub reputation: Account<'info, ReputationRecord>,
+   |         ^^^^^^^^^^
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anchor_spl`
+ --> programs/trust-ledger/src/instructions/approve_milestone.rs:8:5
+  |
+8 | use anchor_spl::token_interface::{mint_to, MintTo, TokenInterface, Mint};
+  |     ^^^^^^^^^^ use of unresolved module or unlinked crate `anchor_spl`
+  |
+  = help: if you wanted to use a crate named `anchor_spl`, use `cargo add anchor_spl` to add it to your `Cargo.toml`
+
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `anchor_spl`
+ --> programs/trust-ledger/src/instructions/approve_milestone.rs:9:5
+  |
+9 | use anchor_spl::associated_token::AssociatedToken;
+  |     ^^^^^^^^^^ use of unresolved module or unlinked crate `anchor_spl`
+  |
+  = help: if you wanted to use a crate named `anchor_spl`, use `cargo add anchor_spl` to add it to your `Cargo.toml`
+
+error[E0432]: unresolved import `crate`
+  --> programs/trust-ledger/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ could not find `__client_accounts_raise_dispute` in the crate root
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused import: `crate::constants::REPUTATION_SEED`
+ --> programs/trust-ledger/src/instructions/raise_dispute.rs:3:5
+  |
+3 | use crate::constants::REPUTATION_SEED;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: ambiguous glob re-exports
+  --> programs/trust-ledger/src/instructions/mod.rs:8:9
+   |
+8  | pub use create_profile::*;
+   |         ^^^^^^^^^^^^^^^^^ the name `handler` in the value namespace is first re-exported here
+...
+13 | pub use raise_dispute::*;
+   |         ---------------- but the name `handler` in the value namespace is also re-exported here
+   |
+   = note: `#[warn(ambiguous_glob_reexports)]` on by default
+
+warning: use of deprecated function `anchor_lang::deprecated_account_info_usage`: Use `UncheckedAccount` instead of `AccountInfo` for safer unchecked accounts.
+  --> programs/trust-ledger/src/instructions/approve_milestone.rs:54:30
+   |
+54 |     pub badge_token_account: Option<AccountInfo<'info>>,
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied
+  --> programs/trust-ledger/src/instructions/raise_dispute.rs:27:21
+   |
+27 | pub fn handler(ctx: Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                     ^^^^^^^^^^^^^^^^^^^^^ the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+note: required by a bound in `anchor_lang::context::Context`
+  --> src/context.rs:26:1
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied
+  --> programs/trust-ledger/src/lib.rs:45:31
+   |
+45 |     pub fn raise_dispute(ctx: Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                               ^^^^^^^^^^^^^^^^^^^^^ the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+note: required by a bound in `anchor_lang::context::Context`
+  --> src/context.rs:26:1
+
+error[E0308]: mismatched types
+  --> programs/trust-ledger/src/instructions/create_contract.rs:54:9
+   |
+53 |     let cpi_ctx = CpiContext::new(
+   |                   --------------- arguments to this function are incorrect
+54 |         ctx.accounts.system_program.to_account_info(),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Pubkey`, found `AccountInfo<'_>`
+   |
+note: associated function defined here
+  --> src/context.rs:188:12
+
+error[E0308]: mismatched types
+  --> programs/trust-ledger/src/instructions/approve_milestone.rs:86:9
+   |
+85 |     let cpi_ctx = CpiContext::new(
+   |                   --------------- arguments to this function are incorrect
+86 |         ctx.accounts.system_program.to_account_info(),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Pubkey`, found `AccountInfo<'_>`
+   |
+note: associated function defined here
+  --> src/context.rs:188:12
+
+error[E0599]: no method named `get` found for struct `ApproveMilestoneBumps` in the current scope
+   --> programs/trust-ledger/src/instructions/approve_milestone.rs:106:41
+    |
+11  | #[derive(Accounts)]
+    |          -------- method `get` not found for this struct
+...
+106 |             let badge_bump = *ctx.bumps.get("badge_mint").unwrap();
+    |                               ----------^^^--------------
+    |                               |         |
+    |                               |         this is an associated function, not a method
+    |                               help: use associated function syntax instead: `ApproveMilestoneBumps::get("badge_mint")`
+    |
+    = note: found the following associated functions; to be used as methods, functions must have a `self` parameter
+note: the candidate is defined in the trait `anchor_lang::prelude::SolanaSysvar`
+   --> src/lib.rs:123:5
+    = help: items from traits can only be used if the trait is implemented and in scope
+    = note: the following traits define an item `get`, perhaps you need to implement one of them:
+            candidate #1: `SliceIndex`
+            candidate #2: `ZeroCopyAccessor`
+            candidate #3: `anchor_lang::solana_program::solana_account_info::Account`
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied in `Context<'_, RaiseDispute<'_>>`
+  --> programs/trust-ledger/src/instructions/raise_dispute.rs:27:21
+   |
+27 | pub fn handler(ctx: Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                     ^^^^^^^^^^^^^^^^^^^^^ unsatisfied trait bound
+   |
+   = help: within `Context<'_, RaiseDispute<'_>>`, the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+note: required because it appears within the type `Context<'_, RaiseDispute<'_>>`
+  --> src/context.rs:26:12
+   = help: unsized fn params are gated as an unstable feature
+   = note: the full name for the type has been written to '/mnt/c/laragon/www/react/ideas/solana-100/counter/target/sbpf-solana-solana/release/deps/trust_ledger.long-type-1822185534242940382.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+help: function arguments must have a statically known size, borrowed types always have a known size
+   |
+27 | pub fn handler(ctx: &Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                     +
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied
+  --> programs/trust-ledger/src/lib.rs:45:39
+   |
+45 |     pub fn raise_dispute(ctx: Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                                       ^^^^^^^^^^^^ the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied
+  --> programs/trust-ledger/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no function or associated item named `try_accounts` found for struct `instructions::raise_dispute::RaiseDispute` in the current scope
+  --> programs/trust-ledger/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ function or associated item not found in `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+  ::: programs/trust-ledger/src/instructions/raise_dispute.rs:7:1
+   |
+7  | pub struct RaiseDispute<'info> {
+   | ------------------------------ function or associated item `try_accounts` not found for this struct
+   |
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `try_accounts`, perhaps you need to implement it:
+           candidate #1: `anchor_lang::Accounts`
+help: there is a method `try_into` with a similar name, but with different arguments
+  --> /home/runner/work/platform-tools/platform-tools/out/rust/library/core/src/convert/mod.rs:617:5
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `RaiseDispute<'_>: Accounts<'_, _>` is not satisfied
+  --> programs/trust-ledger/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ unsatisfied trait bound
+   |
+   = help: the trait `anchor_lang::Accounts<'_, _>` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   = help: the following other types implement trait `anchor_lang::Accounts<'info, B>`:
+             `AccountLoader<'info, T>` implements `anchor_lang::Accounts<'info, B>`
+             `Box<T>` implements `anchor_lang::Accounts<'info, B>`
+             `CreateNonceAccount<'info>` implements `anchor_lang::Accounts<'info, CreateNonceAccountBumps>`
+             `CreateNonceAccountWithSeed<'info>` implements `anchor_lang::Accounts<'info, CreateNonceAccountWithSeedBumps>`
+             `Migration<'info, From, To>` implements `anchor_lang::Accounts<'info, B>`
+             `Option<T>` implements `anchor_lang::Accounts<'info, B>`
+             `Sysvar<'info, T>` implements `anchor_lang::Accounts<'info, B>`
+             `Vec<T>` implements `anchor_lang::Accounts<'info, B>`
+           and 25 others
+note: required by a bound in `anchor_lang::context::Context::<'info, T>::new`
+  --> src/context.rs:59:5
+   = note: the full name for the type has been written to '/mnt/c/laragon/www/react/ideas/solana-100/counter/target/sbpf-solana-solana/release/deps/trust_ledger.long-type-11715666477177966505.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no associated item named `__ANCHOR_IX_PARAM_COUNT` found for struct `instructions::raise_dispute::RaiseDispute` in the current scope
+  --> programs/trust-ledger/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ associated item not found in `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+  ::: programs/trust-ledger/src/instructions/raise_dispute.rs:7:1
+   |
+7  | pub struct RaiseDispute<'info> {
+   | ------------------------------ associated item `__ANCHOR_IX_PARAM_COUNT` not found for this struct
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no associated item named `__anchor_validate_ix_arg_type_0` found for struct `instructions::raise_dispute::RaiseDispute` in the current scope
+  --> programs/trust-ledger/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ associated item not found in `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+  ::: programs/trust-ledger/src/instructions/raise_dispute.rs:7:1
+   |
+7  | pub struct RaiseDispute<'info> {
+   | ------------------------------ associated item `__anchor_validate_ix_arg_type_0` not found for this struct
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied in `Context<'_, RaiseDispute<'_>>`
+  --> programs/trust-ledger/src/lib.rs:45:31
+   |
+45 |     pub fn raise_dispute(ctx: Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                               ^^^^^^^^^^^^^^^^^^^^^ unsatisfied trait bound
+   |
+   = help: within `Context<'_, RaiseDispute<'_>>`, the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+note: required because it appears within the type `Context<'_, RaiseDispute<'_>>`
+  --> src/context.rs:26:12
+   = help: unsized fn params are gated as an unstable feature
+   = note: the full name for the type has been written to '/mnt/c/laragon/www/react/ideas/solana-100/counter/target/sbpf-solana-solana/release/deps/trust_ledger.long-type-18000216082233431990.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+help: function arguments must have a statically known size, borrowed types always have a known size
+   |
+45 |     pub fn raise_dispute(ctx: &Context<RaiseDispute>, index: u8) -> Result<()> {
+   |                               +
+
+error[E0277]: the trait bound `instructions::raise_dispute::RaiseDispute<'_>: Bumps` is not satisfied
+  --> programs/trust-ledger/src/lib.rs:46:32
+   |
+46 |         raise_dispute::handler(ctx, index)
+   |                                ^^^ the trait `Bumps` is not implemented for `instructions::raise_dispute::RaiseDispute<'_>`
+   |
+   = help: the following other types implement trait `Bumps`:
+             CreateNonceAccount<'info>
+             CreateNonceAccountWithSeed<'info>
+             anchor_lang::system_program::AdvanceNonceAccount<'info>
+             anchor_lang::system_program::Allocate<'info>
+             anchor_lang::system_program::AllocateWithSeed<'info>
+             anchor_lang::system_program::Assign<'info>
+             anchor_lang::system_program::AssignWithSeed<'info>
+             anchor_lang::system_program::AuthorizeNonceAccount<'info>
+           and 10 others
+note: required by a bound in `anchor_lang::context::Context`
+  --> src/context.rs:26:1
+
+Some errors have detailed explanations: E0277, E0308, E0432, E0433, E0599.
+For more information about an error, try `rustc --explain E0277`.
+warning: `trust-ledger` (lib) generated 3 warnings
+error: could not compile `trust-ledger` (lib) due to 18 previous errors;
