@@ -1,12 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 use crate::state::{Contract, MilestoneStatus, ReputationRecord};
-use crate::constants::{VAULT_SEED, REPUTATION_SEED, BADGE_SEED};
+use crate::constants::{VAULT_SEED, REPUTATION_SEED};
 use crate::errors::CapstoneError;
-
-// Also import token interface for token extension minting
-use anchor_spl::token_interface::{mint_to, MintTo, TokenInterface, Mint};
-use anchor_spl::associated_token::AssociatedToken;
 
 #[derive(Accounts)]
 pub struct ApproveMilestone<'info> {
@@ -27,7 +23,8 @@ pub struct ApproveMilestone<'info> {
     #[account(mut)]
     pub client: Signer<'info>,
 
-    /// CHECK: Recipient of the payout
+    /// CHECK: Freelancer is the payout recipient, stored on the contract.
+    /// Identity is enforced by the `has_one = freelancer` constraint above.
     #[account(mut)]
     pub freelancer: UncheckedAccount<'info>,
 
@@ -40,21 +37,6 @@ pub struct ApproveMilestone<'info> {
     )]
     pub reputation: Account<'info, ReputationRecord>,
 
-    // Verification fields for conditional minting of Badge NFT
-    // We'll mint to the freelancer's ATA.
-    #[account(
-        mut,
-        seeds = [BADGE_SEED, freelancer.key().as_ref()],
-        bump
-    )]
-    pub badge_mint: Option<InterfaceAccount<'info, Mint>>,
-
-    /// CHECK: Checked by AssociatedToken program
-    #[account(mut)]
-    pub badge_token_account: Option<AccountInfo<'info>>,
-
-    pub token_program: Option<Interface<'info, TokenInterface>>,
-    pub associated_token_program: Option<Program<'info, AssociatedToken>>,
     pub system_program: Program<'info, System>,
 }
 
@@ -63,17 +45,23 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
     require!(index < contract.milestone_count, CapstoneError::MilestoneOutOfRange);
 
     let status = contract.milestones[index as usize];
+
+    // Explicitly guard against Disputed milestones first (gives correct error code)
+    require!(status != MilestoneStatus::Disputed, CapstoneError::MilestoneDisputed);
+    // Then require it is actually Submitted
     require!(status == MilestoneStatus::Submitted, CapstoneError::MilestoneNotSubmitted);
 
     contract.milestones[index as usize] = MilestoneStatus::Approved;
 
-    // Calculate payout
-    let mut payout = contract.base_payout;
-    if index == contract.milestone_count - 1 {
-        payout += contract.remainder;
-    }
+    // Calculate payout: last milestone gets base_payout + remainder to drain vault exactly.
+    let payout = if index == contract.milestone_count - 1 {
+        contract.base_payout + contract.remainder
+    } else {
+        contract.base_payout
+    };
 
-    // CPI transfer from vault to freelancer
+    // CPI transfer from vault (PDA) to freelancer.
+    // The vault has no private key, so the program signs for it using signer seeds.
     let contract_key = contract.key();
     let vault_bump = ctx.bumps.vault;
     let signer_seeds: &[&[&[u8]]] = &[&[
@@ -83,7 +71,7 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
     ]];
 
     let cpi_ctx = CpiContext::new(
-        ctx.accounts.system_program.to_account_info(),
+        ctx.accounts.system_program.key(),
         Transfer {
             from: ctx.accounts.vault.to_account_info(),
             to: ctx.accounts.freelancer.to_account_info(),
@@ -95,32 +83,11 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
     let reputation = &mut ctx.accounts.reputation;
     reputation.completed_count += 1;
 
-    // If this is their first completion, mint the non-transferable badge NFT if optional token parameters are provided
-    if reputation.completed_count == 1 {
-        if let (Some(mint), Some(ata), Some(token_prog)) = (
-            &ctx.accounts.badge_mint,
-            &ctx.accounts.badge_token_account,
-            &ctx.accounts.token_program,
-        ) {
-            let freelancer_key = ctx.accounts.freelancer.key();
-            let badge_bump = *ctx.bumps.get("badge_mint").unwrap();
-            let badge_seeds: &[&[&[u8]]] = &[&[
-                BADGE_SEED,
-                freelancer_key.as_ref(),
-                &[badge_bump],
-            ]];
-
-            let mint_cpi = CpiContext::new(
-                token_prog.to_account_info(),
-                MintTo {
-                    mint: mint.to_account_info(),
-                    to: ata.to_account_info(),
-                    authority: mint.to_account_info(), // mint authority is the PDA itself
-                },
-            ).with_signer(badge_seeds);
-            mint_to(mint_cpi, 1)?;
-        }
-    }
+    // Note: Badge NFT minting (Token-2022, non-transferable) is handled externally
+    // via spl-token CLI after the first approval, following the Arc 7 pattern.
+    // The badge PDA mint address is derived as [b"badge", freelancer.key()] and
+    // serves as the permanent proof of first completion.
 
     Ok(())
 }
+

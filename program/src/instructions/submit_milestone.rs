@@ -17,11 +17,16 @@ pub fn handler(ctx: Context<SubmitMilestone>, index: u8) -> Result<()> {
     require!(index < contract.milestone_count, CapstoneError::MilestoneOutOfRange);
 
     let status = contract.milestones[index as usize];
+
+    // Frozen disputed milestones cannot be resubmitted
+    require!(status != MilestoneStatus::Disputed, CapstoneError::MilestoneDisputed);
+    // Valid start states: NotSubmitted (first time) or Rejected (after a rejection)
     require!(
         status == MilestoneStatus::NotSubmitted || status == MilestoneStatus::Rejected,
-        CapstoneError::MilestoneDisputed // Cannot submit if already approved/submitted or disputed
+        CapstoneError::MilestoneNotSubmitted
     );
 
     contract.milestones[index as usize] = MilestoneStatus::Submitted;
     Ok(())
 }
+

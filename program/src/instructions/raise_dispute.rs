@@ -10,6 +10,7 @@ pub struct RaiseDispute<'info> {
         has_one = freelancer @ CapstoneError::Unauthorized,
     )]
     pub contract: Account<'info, Contract>,
+    #[account(mut)]
     pub freelancer: Signer<'info>,
 
     #[account(

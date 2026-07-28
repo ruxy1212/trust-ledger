@@ -51,7 +51,7 @@ pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, mil
 
     // Move client's SOL into the vault
     let cpi_ctx = CpiContext::new(
-        ctx.accounts.system_program.to_account_info(),
+        ctx.accounts.system_program.key(),
         Transfer {
             from: ctx.accounts.client.to_account_info(),
             to: ctx.accounts.vault.to_account_info(),

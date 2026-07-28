@@ -19,6 +19,9 @@ pub fn handler(ctx: Context<RejectMilestone>, index: u8, reason: String) -> Resu
     require!(index < contract.milestone_count, CapstoneError::MilestoneOutOfRange);
 
     let status = contract.milestones[index as usize];
+
+    // Frozen disputed milestones cannot be rejected
+    require!(status != MilestoneStatus::Disputed, CapstoneError::MilestoneDisputed);
     require!(status == MilestoneStatus::Submitted, CapstoneError::MilestoneNotSubmitted);
 
     contract.milestones[index as usize] = MilestoneStatus::Rejected;
@@ -26,3 +29,4 @@ pub fn handler(ctx: Context<RejectMilestone>, index: u8, reason: String) -> Resu
 
     Ok(())
 }
+
