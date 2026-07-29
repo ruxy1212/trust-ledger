@@ -7,6 +7,7 @@ import { deriveProfilePda, deriveReputationPda } from "@/lib/pda";
 import { shortAddress } from "@/lib/format";
 import { ReputationStat } from "@/components/ReputationStat";
 import { TrustPulse } from "@/components/TrustPulse";
+import { freelancerProfiles, reputationRecords } from "@/types/accounts";
 
 export default function ProfilePage({
   params,
@@ -37,8 +38,8 @@ export default function ProfilePage({
 
     (async () => {
       const [profile, reputation] = await Promise.all([
-        program.account.freelancerProfile.fetchNullable(deriveProfilePda(w)),
-        program.account.reputationRecord.fetchNullable(deriveReputationPda(w)),
+        freelancerProfiles(program).fetchNullable(deriveProfilePda(w)),
+        reputationRecords(program).fetchNullable(deriveReputationPda(w)),
       ]);
 
       setDisplayName(profile?.displayName ?? null);

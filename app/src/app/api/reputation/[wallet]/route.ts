@@ -4,6 +4,7 @@ import { Program } from "@anchor-lang/core";
 import { IDL } from "@/types/idl";
 import { deriveProfilePda, deriveReputationPda } from "@/lib/pda";
 import { checkRateLimit, callerKey } from "@/lib/rate-limit";
+import { freelancerProfiles, reputationRecords } from "@/types/accounts";
 
 const connection = new Connection(process.env.RPC_URL ?? "https://api.devnet.solana.com", "confirmed");
 const program = new Program(IDL, { connection });
@@ -36,8 +37,8 @@ export async function GET(
   }
 
   const [profile, reputation] = await Promise.all([
-    program.account.freelancerProfile.fetchNullable(deriveProfilePda(pubkey)),
-    program.account.reputationRecord.fetchNullable(deriveReputationPda(pubkey)),
+    freelancerProfiles(program).fetchNullable(deriveProfilePda(pubkey)),
+    reputationRecords(program).fetchNullable(deriveReputationPda(pubkey)),
   ]);
 
   return NextResponse.json({

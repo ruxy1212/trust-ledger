@@ -1,6 +1,6 @@
 import { Program } from "@anchor-lang/core";
 import { PublicKey } from "@solana/web3.js";
-import { TrustLedger } from "../types/idl";
+import { freelancerProfiles, reputationRecords } from "../types/accounts";
 import { deriveReputationPda } from "./pda";
 
 export type FreelancerOption = {
@@ -18,9 +18,9 @@ export type FreelancerOption = {
  * 0/0 here, not an error.
  */
 export async function fetchFreelancerOptions(
-  program: Program<TrustLedger>
+  program: Program<any>
 ): Promise<FreelancerOption[]> {
-  const profiles = await program.account.freelancerProfile.all();
+  const profiles = await freelancerProfiles(program).all();
   if (profiles.length === 0) return [];
 
   const reputationPdas = profiles.map((p) =>
@@ -29,8 +29,7 @@ export async function fetchFreelancerOptions(
 
   // fetchMultiple returns null in a slot for any account that doesn't exist
   // yet, instead of throwing — exactly what we want for "not reputable yet".
-  const reputations =
-    await program.account.reputationRecord.fetchMultiple(reputationPdas);
+  const reputations = await reputationRecords(program).fetchMultiple(reputationPdas);
 
   return profiles.map((p, i) => {
     const rep = reputations[i];
