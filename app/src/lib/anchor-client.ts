@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AnchorProvider, Program, setProvider } from "@anchor-lang/core";
+import { AnchorProvider, Idl, Program, setProvider } from "@anchor-lang/core";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { IDL, TrustLedger } from "../types/idl";
 
@@ -11,7 +11,7 @@ import { IDL, TrustLedger } from "../types/idl";
  * reject_milestone, raise_dispute, create_profile). Returns null until a
  * wallet is connected; every write screen should guard on that.
  */
-export function useProgram(): Program<TrustLedger> | null {
+export function useProgram(): Program<Idl> | null {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
 
@@ -30,7 +30,7 @@ export function useProgram(): Program<TrustLedger> | null {
  * that only fetches accounts: the hire-page freelancer dropdown, the
  * public profile page, and the contract page before a wallet connects.
  */
-export function useReadOnlyProgram(): Program<TrustLedger> {
+export function useReadOnlyProgram(): Program<Idl> {
   const { connection } = useConnection();
   return useMemo(() => new Program(IDL, { connection }), [connection]);
 }

@@ -9,6 +9,8 @@ import { deriveVaultPda, deriveReputationPda } from "@/lib/pda";
 import { lamportsToSol, shortAddress } from "@/lib/format";
 import { MilestoneTracker, Role, ContractView } from "@/components/MilestoneTracker";
 import { TrustPulse } from "@/components/TrustPulse";
+import { contracts } from "@/types/accounts";
+import BN from "bn.js";
 
 export default function ContractPage({
   params,
@@ -21,7 +23,7 @@ export default function ContractPage({
   const readOnlyProgram = useReadOnlyProgram();
 
   const [contract, setContract] = useState<
-    (ContractView & { client: PublicKey; freelancer: PublicKey }) | null
+    (ContractView & { client: PublicKey; freelancer: PublicKey; amount: BN }) | null
   >(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
@@ -37,12 +39,12 @@ export default function ContractPage({
   const reload = useCallback(async () => {
     if (!contractPda) return;
     try {
-      const data = await readOnlyProgram.account.contract.fetch(contractPda);
+      const data = await contracts(readOnlyProgram).fetch(contractPda);
       // Cast is TS-only: the IDL type is inferred from a JSON import rather
       // than anchor-codegen'd, so field types don't always line up exactly
       // with the hand-written ContractView shape below. Runtime decoding
       // (what actually matters) comes straight from the on-chain IDL either way.
-      setContract(data as unknown as ContractView & { client: PublicKey; freelancer: PublicKey });
+      setContract(data as unknown as ContractView & { client: PublicKey; freelancer: PublicKey; amount: BN });
       setLoadError(null);
     } catch {
       setLoadError("No contract found at that address.");

@@ -1,7 +1,9 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { Program } from "@anchor-lang/core";
 import { IDL } from "@/types/idl";
+import { freelancerProfiles, reputationRecords } from "@/types/accounts";
 import { deriveProfilePda, deriveReputationPda } from "@/lib/pda";
+import type { ChatCompletionTool } from "openai/resources/chat/completions";
 
 const connection = new Connection(
   process.env.RPC_URL ?? "https://api.devnet.solana.com",
@@ -9,7 +11,7 @@ const connection = new Connection(
 );
 const program = new Program(IDL, { connection });
 
-export const tools = [
+export const tools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
@@ -51,8 +53,8 @@ export async function runAgentTool(name: string, input: { walletAddress: string 
     const walletPubkey = new PublicKey(input.walletAddress);
 
     const [profile, reputation] = await Promise.all([
-      program.account.freelancerProfile.fetchNullable(deriveProfilePda(walletPubkey)),
-      program.account.reputationRecord.fetchNullable(deriveReputationPda(walletPubkey)),
+      freelancerProfiles(program).fetchNullable(deriveProfilePda(walletPubkey)),
+      reputationRecords(program).fetchNullable(deriveReputationPda(walletPubkey)),
     ]);
 
     const displayName = profile ? sanitizeDisplayName(profile.displayName) : "Unregistered freelancer";

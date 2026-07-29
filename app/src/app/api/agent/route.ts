@@ -91,8 +91,13 @@ export async function POST(req: Request) {
     }
 
     for (const toolCall of assistantMessage.tool_calls) {
+      if (toolCall.type !== "function") continue;
+
       const input = JSON.parse(toolCall.function.arguments);
-      const result = await runAgentTool(toolCall.function.name, input);
+      const result = await runAgentTool(
+        toolCall.function.name,
+        input
+      );
       messages.push({ role: "tool", tool_call_id: toolCall.id, content: result });
     }
   }
