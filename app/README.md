@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trust Ledger
 
-## Getting Started
+Trust Ledger is the Day 99 capstone for 100 Days of Solana: a milestone-based escrow app where clients lock funds on-chain, freelancers build a portable reputation, and an AI agent can read the record without taking custody of anything.
 
-First, run the development server:
+The app is built with Next.js, Anchor, and the Solana wallet adapter. It includes:
+
+- a client flow for creating contracts with milestones
+- freelancer profiles that live on chain
+- milestone tracking that makes progress visible
+- a dashboard for tracking active work
+- public contract and profile pages
+- a read-only AI tool that checks reputation from chain data
+
+## Local Setup
+
+1. Install dependencies.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Create your local environment file.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Fill in the RPC and AI settings in `.env.local`.
 
-## Learn More
+Required variables:
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXT_PUBLIC_RPC_URL`
+- `RPC_URL`
+- `OPEN_AI_API_KEY`
+- `OPEN_AI_BASE_URL`
+- `OPEN_AI_MODEL`
+- `NEXT_APP_URL` if you want metadata to point at a custom host
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Start the app.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm dev
+```
 
-## Deploy on Vercel
+5. Open the local site in your browser.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+http://localhost:3000
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Available Scripts
+
+- `pnpm dev` starts the development server
+- `pnpm build` creates a production build
+- `pnpm start` runs the production server
+- `pnpm lint` runs ESLint
+
+## What It Is For
+
+This project is about proving that a Solana app can do more than store data. It can coordinate work, enforce contract milestones, preserve reputation across sessions, and still leave the wallet owner in control.
+
+## To-Dos
+- A verification badge that can be revoked (using another PDA + Token2022 Extensions)
+- Dispute handling (for now, when a dispute is created, the funds stay locked in the vault)
+- UI Adjustments, the flow is not yet smooth, across the entire app.
