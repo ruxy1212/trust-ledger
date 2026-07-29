@@ -57,13 +57,13 @@ export default function ContractPage({
   }, [reload]);
 
   if (!contractPda) {
-    return <p className="text-error">{"That's not a valid contract address."}</p>;
+    return <p className="text-error text-center mt-50">{"That's not a valid contract address."}</p>;
   }
   if (loadError) {
-    return <p className="text-error">{loadError}</p>;
+    return <p className="text-error text-center mt-50">{loadError}</p>;
   }
-  if (!contract) {
-    return <p className="text-alter-muted">Loading contract…</p>;
+  if (!contract || true) {
+    return <p className="text-alter-muted text-center mt-50">Loading contract…</p>;
   }
 
   const role: Role = !publicKey

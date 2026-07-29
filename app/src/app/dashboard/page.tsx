@@ -46,17 +46,19 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-2xl font-bold text-alter-primary">My contracts</h1>
 
-      {loading && <p className="mt-4 text-alter-muted">Loading…</p>}
+      {loading ? <p className="text-alter-muted text-center mt-50">Loading…</p> : (
+        <>
+          <section className="mt-8">
+            <h2 className="mb-3 text-sm font-medium text-alter-secondary">Hiring ({asClient.length})</h2>
+            <ContractList items={asClient} />
+          </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 text-sm font-medium text-alter-secondary">Hiring ({asClient.length})</h2>
-        <ContractList items={asClient} />
-      </section>
-
-      <section className="mt-8">
-        <h2 className="mb-3 text-sm font-medium text-alter-secondary">Working on ({asFreelancer.length})</h2>
-        <ContractList items={asFreelancer} />
-      </section>
+          <section className="mt-8">
+            <h2 className="mb-3 text-sm font-medium text-alter-secondary">Working on ({asFreelancer.length})</h2>
+            <ContractList items={asFreelancer} />
+          </section>
+        </>
+      )}
     </div>
   );
 }
