@@ -1,0 +1,429 @@
+@import "tailwindcss";
+
+/* ─── Futuristic Audio Trimmer Theme ─────────────────────────────────────── */
+:root {
+  /* Core palette */
+  --bg-base: #07080f;
+  --bg-surface: #0d0f1c;
+  --bg-elevated: #121528;
+  --bg-overlay: #1a1e35;
+
+  /* Primary — electric indigo */
+  --primary: #6366f1;
+  --primary-glow: #6366f140;
+  --primary-dim: #6366f122;
+  --primary-hover: #818cf8;
+
+  /* Accent — cyan spark */
+  --accent: #22d3ee;
+  --accent-glow: #22d3ee33;
+  --accent-dim: #22d3ee18;
+  --accent-hover: #67e8f9;
+
+  /* Secondary — violet */
+  --secondary: #a855f7;
+  --secondary-glow: #a855f730;
+
+  /* Waveform colors */
+  --wave-color: #6366f1;
+  --wave-progress: #22d3ee;
+  --region-fill: #6366f125;
+  --region-border: #6366f180;
+
+  /* Text */
+  --alter-primary: #e8eaf6;
+  --alter-secondary: #8b8fa8;
+  --alter-muted: #4b4f68;
+  --alter-accent: #22d3ee;
+
+  /* Borders */
+  --border: #1e2240;
+  --border-bright: #2d3260;
+  --border-glow: #6366f150;
+
+  /* Status */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+
+  /* Spacing & radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px #00000060;
+  --shadow-md: 0 4px 24px #00000080;
+  --shadow-glow: 0 0 24px var(--primary-glow);
+  --shadow-accent: 0 0 24px var(--accent-glow);
+
+  /* Background & foreground aliases */
+  --background: var(--bg-base);
+  --foreground: var(--alter-primary);
+
+  /* Added: body{} below references --font-body, which the original file
+     never defined (fell back to the browser default everywhere). Pointing
+     it at the Geist Sans variable set up in app/layout.tsx. */
+  --font-body: var(--font-geist-sans);
+}
+
+/* Reset dark/light media query — single theme only */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-geist-mono: var(--font-geist-mono);
+  --font-display: var(--font-syne);
+  --font-mono: var(--font-jetbrains);
+
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--bg-overlay);
+  --color-primary: var(--primary);
+  --color-primary-glow: var(--primary-glow);
+  --color-primary-dim: var(--primary-dim);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-hover: var(--accent-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-glow: var(--secondary-glow);
+  --color-wave-color: var(--wave-color);
+  --color-wave-progress: var(--wave-progress);
+  --color-region-fill: var(--region-fill);
+  --color-region-border: var(--region-border);
+  --color-alter-primary: var(--alter-primary);
+  --color-alter-secondary: var(--alter-secondary);
+  --color-alter-muted: var(--alter-muted);
+  --color-alter-accent: var(--alter-accent);
+  --color-border: var(--border);
+  --color-border-bright: var(--border-bright);
+  --color-border-glow: var(--border-glow);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-background);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-background);
+  color: var(--alter-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+
+  /* Subtle grid background */
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ─── Selection ───────────────────────────────────────────────────────────── */
+::selection {
+  background: var(--primary-glow);
+  color: var(--alter-primary);
+}
+
+/* ─── Focus ───────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes bar-breathe {
+
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin-smooth {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-5px);
+  }
+
+  60% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ─── Custom utilities (only what Tailwind cannot express) ─────────────────── */
+
+/* Staggered animation delays — nth-child not possible in Tailwind */
+.bar-stagger>*:nth-child(1) {
+  animation-delay: 0.00s;
+}
+
+.bar-stagger>*:nth-child(2) {
+  animation-delay: 0.07s;
+}
+
+.bar-stagger>*:nth-child(3) {
+  animation-delay: 0.14s;
+}
+
+.bar-stagger>*:nth-child(4) {
+  animation-delay: 0.21s;
+}
+
+.bar-stagger>*:nth-child(5) {
+  animation-delay: 0.28s;
+}
+
+.bar-stagger>*:nth-child(6) {
+  animation-delay: 0.35s;
+}
+
+.bar-stagger>*:nth-child(7) {
+  animation-delay: 0.42s;
+}
+
+.bar-stagger>*:nth-child(8) {
+  animation-delay: 0.49s;
+}
+
+.bar-stagger>*:nth-child(9) {
+  animation-delay: 0.56s;
+}
+
+.bar-stagger>*:nth-child(10) {
+  animation-delay: 0.63s;
+}
+
+.bar-stagger>*:nth-child(11) {
+  animation-delay: 0.56s;
+}
+
+.bar-stagger>*:nth-child(12) {
+  animation-delay: 0.49s;
+}
+
+.bar-stagger>*:nth-child(13) {
+  animation-delay: 0.42s;
+}
+
+.bar-stagger>*:nth-child(14) {
+  animation-delay: 0.35s;
+}
+
+.bar-stagger>*:nth-child(15) {
+  animation-delay: 0.28s;
+}
+
+.bar-stagger>*:nth-child(16) {
+  animation-delay: 0.21s;
+}
+
+/* Varying bar heights — nth-child patterns not expressible in Tailwind */
+.bar-stagger>*:nth-child(odd) {
+  height: 55%;
+}
+
+.bar-stagger>*:nth-child(3n) {
+  height: 85%;
+}
+
+.bar-stagger>*:nth-child(4n) {
+  height: 40%;
+}
+
+.bar-stagger>*:nth-child(5n) {
+  height: 100%;
+}
+
+.bar-stagger>*:nth-child(7n) {
+  height: 70%;
+}
+
+/* Wavesurfer DOM overrides — injected into shadow/internal elements */
+[data-resize] {
+  background: var(--primary) !important;
+  width: 3px !important;
+  border-radius: 2px !important;
+  opacity: 0.85 !important;
+}
+
+/* Scanline texture pseudo-element */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(91, 110, 245, 0.018) 2px,
+      rgba(91, 110, 245, 0.018) 3px);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 10;
+}
+
+/* Named animation classes */
+.animate-bar-breathe {
+  animation: bar-breathe 1.4s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s ease both;
+}
+
+.animate-shake {
+  animation: shake 0.35s ease;
+}
+
+.animate-spin-smooth {
+  animation: spin-smooth 0.8s linear infinite;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.2s ease infinite;
+}
+
+/* ─── Extra Landing Page Utilities ───────────────────────────────────────── */
+
+.glass-card {
+  user-select: none;
+  background: color-mix(in srgb, var(--bg-surface), transparent 30%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-bright);
+}
+
+.glass-card:hover {
+  background: oklch(51.017% 0.26191 276.948 / 0.2);
+  border-color: var(--cyan-400);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.neon-glow {
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--primary), transparent 70%),
+    0 0 40px color-mix(in srgb, var(--accent), transparent 90%);
+}
+
+.text-gradient {
+  background: linear-gradient(to right, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Spacing Aliases to match sample */
+:root {
+  --stack-xs: 4px;
+  --stack-sm: 8px;
+  --stack-md: 16px;
+  --stack-lg: 32px;
+  --stack-xl: 64px;
+  --container-max: 1440px;
+}
+
+/* ─── Added: wallet-adapter-react-ui override ───────────────────────────────
+   The library ships its own inline styles for .wallet-adapter-button; this
+   reskins it to match the theme instead of fighting it with !important. */
+.wallet-adapter-button {
+  background: var(--primary) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 14px !important;
+  height: 40px !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  background: var(--primary-hover) !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-bright) !important;
+  padding: 16px;
+}
+
+.wallet-adapter-modal-list li {
+  margin-top: 12px;
+}

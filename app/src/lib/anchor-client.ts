@@ -1,0 +1,36 @@
+"use client";
+
+import { useMemo } from "react";
+import { AnchorProvider, Program, setProvider } from "@anchor-lang/core";
+import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
+import { IDL, TrustLedger } from "../types/idl";
+
+/**
+ * Wallet-bound program instance — use this for anything that sends a
+ * transaction (create_contract, submit_milestone, approve_milestone,
+ * reject_milestone, raise_dispute, create_profile). Returns null until a
+ * wallet is connected; every write screen should guard on that.
+ */
+export function useProgram(): Program<TrustLedger> | null {
+  const { connection } = useConnection();
+  const wallet = useAnchorWallet();
+
+  return useMemo(() => {
+    if (!wallet) return null;
+    const provider = new AnchorProvider(connection, wallet, {
+      commitment: "confirmed",
+    });
+    setProvider(provider);
+    return new Program(IDL, { connection });
+  }, [connection, wallet]);
+}
+
+/**
+ * Read-only program instance — no wallet required. Use this for anything
+ * that only fetches accounts: the hire-page freelancer dropdown, the
+ * public profile page, and the contract page before a wallet connects.
+ */
+export function useReadOnlyProgram(): Program<TrustLedger> {
+  const { connection } = useConnection();
+  return useMemo(() => new Program(IDL, { connection }), [connection]);
+}

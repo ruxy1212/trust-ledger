@@ -1,0 +1,577 @@
+{
+  "address": "E68AQePth8MVtn2aHax23c6BWye8Mnw2fkDzCyTfqNEk",
+  "metadata": {
+    "name": "trust_ledger",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "approve_milestone",
+      "discriminator": [
+        145,
+        85,
+        92,
+        60,
+        50,
+        130,
+        219,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contract"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "contract"
+          ]
+        },
+        {
+          "name": "freelancer",
+          "docs": [
+            "Identity is enforced by the `has_one = freelancer` constraint above."
+          ],
+          "writable": true,
+          "relations": [
+            "contract"
+          ]
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "create_contract",
+      "discriminator": [
+        244,
+        48,
+        244,
+        178,
+        216,
+        88,
+        122,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  114,
+                  97,
+                  99,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              },
+              {
+                "kind": "arg",
+                "path": "contract_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contract"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "freelancer"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "contract_id",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "milestone_count",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "create_profile",
+      "discriminator": [
+        225,
+        205,
+        234,
+        143,
+        17,
+        186,
+        50,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "freelancer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "display_name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "raise_dispute",
+      "discriminator": [
+        41,
+        243,
+        1,
+        51,
+        150,
+        95,
+        246,
+        73
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true
+        },
+        {
+          "name": "freelancer",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "contract"
+          ]
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "reject_milestone",
+      "discriminator": [
+        243,
+        48,
+        66,
+        165,
+        237,
+        41,
+        116,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true
+        },
+        {
+          "name": "client",
+          "signer": true,
+          "relations": [
+            "contract"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "submit_milestone",
+      "discriminator": [
+        35,
+        96,
+        220,
+        215,
+        102,
+        83,
+        139,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true
+        },
+        {
+          "name": "freelancer",
+          "signer": true,
+          "relations": [
+            "contract"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Contract",
+      "discriminator": [
+        172,
+        138,
+        115,
+        242,
+        121,
+        67,
+        183,
+        26
+      ]
+    },
+    {
+      "name": "FreelancerProfile",
+      "discriminator": [
+        142,
+        199,
+        151,
+        44,
+        211,
+        185,
+        36,
+        26
+      ]
+    },
+    {
+      "name": "ReputationRecord",
+      "discriminator": [
+        140,
+        29,
+        118,
+        100,
+        134,
+        207,
+        99,
+        194
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Wrong wallet signs an instruction that requires client or freelancer"
+    },
+    {
+      "code": 6001,
+      "name": "MilestoneOutOfRange",
+      "msg": "Milestone index doesn't exist on this contract"
+    },
+    {
+      "code": 6002,
+      "name": "MilestoneNotSubmitted",
+      "msg": "Milestone is not in the Submitted state"
+    },
+    {
+      "code": 6003,
+      "name": "NotYetRejected",
+      "msg": "Milestone is not in the Rejected state"
+    },
+    {
+      "code": 6004,
+      "name": "MilestoneDisputed",
+      "msg": "Milestone is frozen in a Disputed state"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidMilestoneCount",
+      "msg": "Milestone count must be greater than zero"
+    },
+    {
+      "code": 6006,
+      "name": "NameTooLong",
+      "msg": "Freelancer display name is too long (max 50 chars)"
+    },
+    {
+      "code": 6007,
+      "name": "ReasonTooLong",
+      "msg": "Rejection reason is too long (max 200 chars)"
+    }
+  ],
+  "types": [
+    {
+      "name": "Contract",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "client",
+            "type": "pubkey"
+          },
+          {
+            "name": "freelancer",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "milestone_count",
+            "type": "u8"
+          },
+          {
+            "name": "base_payout",
+            "type": "u64"
+          },
+          {
+            "name": "remainder",
+            "type": "u64"
+          },
+          {
+            "name": "milestones",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "MilestoneStatus"
+                }
+              }
+            }
+          },
+          {
+            "name": "rejection_reasons",
+            "type": {
+              "vec": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FreelancerProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "freelancer",
+            "type": "pubkey"
+          },
+          {
+            "name": "display_name",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "NotSubmitted"
+          },
+          {
+            "name": "Submitted"
+          },
+          {
+            "name": "Approved"
+          },
+          {
+            "name": "Rejected"
+          },
+          {
+            "name": "Disputed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReputationRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "completed_count",
+            "type": "u32"
+          },
+          {
+            "name": "disputed_count",
+            "type": "u32"
+          }
+        ]
+      }
+    }
+  ]
+}
