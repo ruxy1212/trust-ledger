@@ -1,5 +1,6 @@
 import type { PublicKey } from "@solana/web3.js";
 import type { Program } from "@anchor-lang/core";
+import type { GetProgramAccountsFilter } from "@solana/web3.js";
 import type BN from "bn.js";
 
 /**
@@ -67,6 +68,9 @@ export interface ContractAccount {
 interface ContractClient {
   fetch(address: PublicKey | string): Promise<ContractAccount>;
   fetchNullable(address: PublicKey | string): Promise<ContractAccount | null>;
+  all(
+    filters?: GetProgramAccountsFilter[]
+  ): Promise<{ publicKey: PublicKey; account: ContractAccount }[]>;
 }
 
 export function contracts(program: AnyProgram): ContractClient {

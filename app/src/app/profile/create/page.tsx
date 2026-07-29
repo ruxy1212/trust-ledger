@@ -1,17 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from '@bprogress/next/app'
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { SystemProgram } from "@solana/web3.js";
 import { useProgram } from "@/lib/anchor-client";
 import { deriveProfilePda } from "@/lib/pda";
+import { freelancerProfiles } from "@/types/accounts";
 
 export default function CreateProfilePage() {
   const { publicKey } = useWallet();
   const program = useProgram();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!program || !publicKey) return;
+
+    (async () => {
+      const profile = await freelancerProfiles(program).fetchNullable(
+        deriveProfilePda(publicKey)
+      );
+
+      if (profile) {
+        router.replace(`/profile/${publicKey.toBase58()}`);
+      }
+    })();
+  }, [program, publicKey, router]);
 
   const [displayName, setDisplayName] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");

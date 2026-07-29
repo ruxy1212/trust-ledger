@@ -8,14 +8,12 @@ export default function HomePage() {
 
       <div className="max-w-2xl">
         <h1 className="font-display text-4xl font-bold tracking-tight text-alter-primary sm:text-5xl">
-          Escrow that pays on <span className="text-gradient">milestones</span>.
+          Escrow that releases funds <span className="text-gradient">by milestones</span>.
           <br />
-          Reputation that follows the <span className="text-gradient">wallet</span>.
+          Reputation that stays with your <span className="text-gradient">wallet</span>.
         </h1>
         <p className="mt-5 text-alter-secondary">
-          Funds lock on chain the moment a contract starts. Every completed
-          milestone updates a public, portable record — no platform to trust,
-          nothing to migrate if you leave.
+          Funds are locked on-chain when a contract begins, and each completed milestone builds a public reputation you own. No platform lock-in. No reputation lost.
         </p>
       </div>
 

@@ -6,8 +6,9 @@ import { useReadOnlyProgram } from "@/lib/anchor-client";
 import { deriveProfilePda, deriveReputationPda } from "@/lib/pda";
 import { shortAddress } from "@/lib/format";
 import { ReputationStat } from "@/components/ReputationStat";
-import { TrustPulse } from "@/components/TrustPulse";
 import { freelancerProfiles, reputationRecords } from "@/types/accounts";
+import Link from "next/link";
+import { useRouter } from '@bprogress/next/app'
 
 export default function ProfilePage({
   params,
@@ -15,6 +16,7 @@ export default function ProfilePage({
   params: Promise<{ wallet: string }>;
 }) {
   const { wallet } = use(params);
+  const router = useRouter();
   const program = useReadOnlyProgram();
 
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export default function ProfilePage({
   useEffect(() => {
     if (!walletPubkey) {
       setNotFound(true);
+      router.replace('/profile/create')
       return;
     }
     const w = walletPubkey;
@@ -54,7 +57,6 @@ export default function ProfilePage({
 
   return (
     <div className="mx-auto max-w-lg text-center">
-      <TrustPulse mode="progress" bars={16} active={Math.min(completedCount, 16)} className="mx-auto mb-6" />
 
       <h1 className="font-display text-2xl font-bold text-alter-primary">
         {displayName ?? "Unregistered freelancer"}
@@ -71,6 +73,14 @@ export default function ProfilePage({
           read directly from chain and are accurate regardless.
         </p>
       )}
+      <div className="flex flex-wrap items-center justify-center py-8 gap-4">
+        <Link
+          href="/dashboard"
+          className="neon-glow rounded-md bg-primary px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-hover"
+        >
+          Back to Dashboard
+        </Link>
+      </div>
     </div>
   );
 }

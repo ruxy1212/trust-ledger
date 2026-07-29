@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { ClientWalletProvider } from "@/lib/wallet-provider";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
+import { Provider } from "./provider";
 
 // globals.css's `@theme inline` block expects these four CSS variables:
 // --font-geist-sans, --font-geist-mono, --font-syne, --font-jetbrains.
@@ -19,9 +20,14 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_APP_URL || 'https://solana-100-days-mlh.vercel.app/'),
   title: "Trust Ledger",
-  description: "Milestone escrow and portable reputation for freelance work, on Solana.",
-};
+  description:
+    'Milestone escrow and portable reputation for freelance work, on Solana.',
+  openGraph: {
+    images: 'https://solana-100-days-mlh.vercel.app/og.png',
+  },
+}
 
 export default function RootLayout({
   children,
@@ -32,10 +38,12 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} ${syne.variable} ${jetbrainsMono.variable}`}>
       <body>
         <ClientWalletProvider>
-          <Nav />
-          <main className="mx-auto max-w-(--container-max) px-6 py-10">
-            {children}
-          </main>
+          <Provider>
+            <Nav />
+            <main className="mx-auto max-w-(--container-max) px-6 py-10">
+              {children}
+            </main>
+          </Provider>
         </ClientWalletProvider>
       </body>
     </html>

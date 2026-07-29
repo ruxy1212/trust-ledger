@@ -8,9 +8,10 @@ import { useProgram, useReadOnlyProgram } from "@/lib/anchor-client";
 import { deriveVaultPda, deriveReputationPda } from "@/lib/pda";
 import { lamportsToSol, shortAddress } from "@/lib/format";
 import { MilestoneTracker, Role, ContractView } from "@/components/MilestoneTracker";
-import { TrustPulse } from "@/components/TrustPulse";
 import { contracts } from "@/types/accounts";
 import BN from "bn.js";
+import Link from "next/link";
+import { MilestoneProgress } from "@/components/MilestoneProgress";
 
 export default function ContractPage({
   params,
@@ -160,14 +161,14 @@ export default function ContractPage({
             {shortAddress(contractPda, 6)}
           </p>
           <p className="mt-1 text-sm text-alter-secondary">
-            Client {shortAddress(contract.client)} → Freelancer{" "}
-            {shortAddress(contract.freelancer)} · {lamportsToSol(contract.amount).toFixed(4)} SOL total
+            Client: {shortAddress(contract.client)}{publicKey && publicKey.equals(contract.client) && " (You)"} → Freelancer:{" "}
+            {shortAddress(contract.freelancer)}{publicKey && publicKey.equals(contract.freelancer) && " (You)"} · {lamportsToSol(contract.amount).toFixed(4)} SOL total
           </p>
         </div>
         {!publicKey && <WalletMultiButton />}
       </div>
 
-      <TrustPulse mode="progress" bars={contract.milestoneCount} active={completed} className="mb-8" />
+      <MilestoneProgress totalMilestones={contract.milestoneCount} completed={completed} className="mb-8" />
 
       {role === "viewer" && publicKey && (
         <p className="mb-6 rounded-md border border-border bg-elevated px-4 py-3 text-sm text-alter-secondary">
@@ -186,6 +187,14 @@ export default function ContractPage({
         onReject={handleReject}
         onDispute={handleDispute}
       />
+      <div className="flex flex-wrap items-center justify-center py-8 gap-4">
+        <Link
+          href="/dashboard"
+          className="neon-glow rounded-md bg-primary px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-hover"
+        >
+          Back to Dashboard
+        </Link>
+      </div>
     </div>
   );
 }

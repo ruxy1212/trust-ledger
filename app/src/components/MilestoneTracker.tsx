@@ -92,7 +92,6 @@ function MilestoneRow({
 
   return (
     <motion.li
-      layout
       className="glass-card relative rounded-lg p-5"
       style={{
         filter: isDisputed ? "saturate(0.35)" : undefined,
@@ -221,7 +220,6 @@ function StatusPill({ status }: { status: string }) {
   };
   return (
     <motion.span
-      layout
       className="rounded-full px-2 py-0.5 text-xs font-medium"
       style={{
         color: color[status],

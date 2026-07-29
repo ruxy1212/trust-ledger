@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { AnchorProvider, Idl, Program, setProvider } from "@anchor-lang/core";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
-import { IDL, TrustLedger } from "../types/idl";
+import { IDL } from "../types/idl";
 
 /**
  * Wallet-bound program instance — use this for anything that sends a
@@ -21,7 +21,7 @@ export function useProgram(): Program<Idl> | null {
       commitment: "confirmed",
     });
     setProvider(provider);
-    return new Program(IDL, { connection });
+    return new Program(IDL, provider);
   }, [connection, wallet]);
 }
 
