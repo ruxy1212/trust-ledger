@@ -92,6 +92,52 @@
           }
         },
         {
+          "name": "badge_mint",
+          "docs": [
+            "freelancer's first-ever approved milestone this account does not",
+            "exist yet and is created + initialized by hand inside the handler",
+            "(see `crate::badge::mint_badge`) — Anchor's `init` constraint can't",
+            "express a Token-2022 mint with the NonTransferable extension. On",
+            "every later approval (for this freelancer, across any contract) the",
+            "account already exists and this instruction leaves it untouched."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  100,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "badge_token_account",
+          "docs": [
+            "Verified against the real ATA derivation below rather than trusted",
+            "blindly, since it's the client's wallet supplying this account."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -467,6 +513,21 @@
       "code": 6007,
       "name": "ReasonTooLong",
       "msg": "Rejection reason is too long (max 200 chars)"
+    },
+    {
+      "code": 6008,
+      "name": "PreviousMilestoneNotApproved",
+      "msg": "The previous milestone must be approved before this one can be submitted"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidBadgeTokenAccount",
+      "msg": "badge_token_account is not the freelancer's associated token account for badge_mint"
+    },
+    {
+      "code": 6010,
+      "name": "BadgeSetupFailed",
+      "msg": "Failed to construct a Token-2022 badge instruction"
     }
   ],
   "types": [
