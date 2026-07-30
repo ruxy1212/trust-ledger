@@ -28,6 +28,15 @@ export function ReputationAgentWidget() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "auto";
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [open]);
+
   async function send() {
     const message = input.trim();
     if (!message || loading) return;
@@ -56,18 +65,18 @@ export function ReputationAgentWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-30">
       <AnimatePresence>
-        {open && (
+        {open ? (
           <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
-            className="glass-card mb-3 flex h-96 w-80 flex-col rounded-lg border border-border p-3"
+            className="glass-card backdrop-blur-md mb-3 flex h-96 w-80 flex-col rounded-lg border border-border p-3"
           >
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-alter-primary">Reputation lookup</span>
               <button
                 onClick={() => setOpen(false)}
-                className="text-alter-muted hover:text-alter-primary"
+                className="text-error hover:text-alter-primary"
                 aria-label="Close"
               >
                 ✕
@@ -76,7 +85,7 @@ export function ReputationAgentWidget() {
 
             <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto pr-1 text-sm">
               {messages.length === 0 && (
-                <p className="text-alter-muted">
+                <p className="text-alter-secondary mt-16 text-center text-sm">
                   Paste a wallet address, or ask something like &ldquo;how many milestones has
                   this freelancer completed?&rdquo;
                 </p>
@@ -92,7 +101,7 @@ export function ReputationAgentWidget() {
                       : "mr-6 rounded-md bg-elevated px-3 py-2 text-alter-secondary"
                   }
                 >
-                  {m.text}
+                  <div className="overflow-hidden">{m.text}</div>
                 </div>
               ))}
               {loading && (
@@ -115,7 +124,7 @@ export function ReputationAgentWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Wallet address or a question…"
                 maxLength={500}
-                className="w-full rounded-sm border border-border bg-elevated px-2 py-1.5 text-sm text-alter-primary outline-none focus-visible:border-primary"
+                className="w-full rounded-sm border border-primary bg-elevated px-2 py-1.5 text-sm text-alter-primary outline-none focus-visible:border-primary"
               />
               <button
                 type="submit"
@@ -126,17 +135,17 @@ export function ReputationAgentWidget() {
               </button>
             </form>
           </motion.div>
+        ):(
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setOpen((o) => !o)}
+            className="neon-glow flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg"
+            aria-label="Open reputation lookup"
+          >
+            <span className="saturate-0 brightness-150">{open ? "✕" : "✨"}</span>
+          </motion.button>
         )}
-      </AnimatePresence>
-
-      <motion.button
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setOpen((o) => !o)}
-        className="neon-glow flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-lg"
-        aria-label="Open reputation lookup"
-      >
-        {open ? "✕" : "🔎"}
-      </motion.button>
+      </AnimatePresence> 
     </div>
   );
 }
