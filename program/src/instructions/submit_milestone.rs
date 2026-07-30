@@ -26,6 +26,17 @@ pub fn handler(ctx: Context<SubmitMilestone>, index: u8) -> Result<()> {
         CapstoneError::MilestoneNotSubmitted
     );
 
+    // Milestones must be worked in order. Index 0 has no predecessor; every
+    // other index requires the one before it to already be Approved — this
+    // is what stops milestone 5 from being submitted (and later approved)
+    // while 1-4 are still sitting untouched.
+    if index > 0 {
+        require!(
+            contract.milestones[(index - 1) as usize] == MilestoneStatus::Approved,
+            CapstoneError::PreviousMilestoneNotApproved
+        );
+    }
+
     contract.milestones[index as usize] = MilestoneStatus::Submitted;
     Ok(())
 }

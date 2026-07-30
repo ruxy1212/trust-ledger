@@ -18,4 +18,10 @@ pub enum CapstoneError {
     NameTooLong,
     #[msg("Rejection reason is too long (max 200 chars)")]
     ReasonTooLong,
+    #[msg("The previous milestone must be approved before this one can be submitted")]
+    PreviousMilestoneNotApproved,
+    #[msg("badge_token_account is not the freelancer's associated token account for badge_mint")]
+    InvalidBadgeTokenAccount,
+    #[msg("Failed to construct a Token-2022 badge instruction")]
+    BadgeSetupFailed,
 }
