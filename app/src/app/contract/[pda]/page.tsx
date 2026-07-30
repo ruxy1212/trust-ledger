@@ -5,7 +5,14 @@ import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useProgram, useReadOnlyProgram } from "@/lib/anchor-client";
-import { deriveVaultPda, deriveReputationPda } from "@/lib/pda";
+import {
+  deriveVaultPda,
+  deriveReputationPda,
+  deriveBadgeMintPda,
+  deriveBadgeTokenAccount,
+  TOKEN_2022_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@/lib/pda";
 import { lamportsToSol, shortAddress } from "@/lib/format";
 import { MilestoneTracker, Role, ContractView } from "@/components/MilestoneTracker";
 import { contracts } from "@/types/accounts";
@@ -62,7 +69,7 @@ export default function ContractPage({
   if (loadError) {
     return <p className="text-error text-center mt-50">{loadError}</p>;
   }
-  if (!contract || true) {
+  if (!contract) {
     return <p className="text-alter-muted text-center mt-50">Loading contract…</p>;
   }
 
@@ -106,6 +113,8 @@ export default function ContractPage({
     if (!program || !publicKey || !contractPda || !contract) return;
     const vaultPda = deriveVaultPda(contractPda);
     const reputationPda = deriveReputationPda(contract.freelancer);
+    const badgeMintPda = deriveBadgeMintPda(contract.freelancer);
+    const badgeTokenAccount = deriveBadgeTokenAccount(contract.freelancer);
     await runAction(index, () =>
       program.methods
         .approveMilestone(index)
@@ -115,6 +124,10 @@ export default function ContractPage({
           client: publicKey,
           freelancer: contract.freelancer,
           reputation: reputationPda,
+          badgeMint: badgeMintPda,
+          badgeTokenAccount: badgeTokenAccount,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .rpc()

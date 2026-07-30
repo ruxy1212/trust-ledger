@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ClientWalletProvider } from "@/lib/wallet-provider";
 import { Nav } from "@/components/Nav";
+import { ReputationAgentWidget } from "@/components/ReputationAgentWidget";
 import "./globals.css";
 import { Provider } from "./provider";
 
@@ -43,6 +44,7 @@ export default function RootLayout({
             <main className="mx-auto max-w-(--container-max) px-6 py-10">
               {children}
             </main>
+            <ReputationAgentWidget />
           </Provider>
         </ClientWalletProvider>
       </body>

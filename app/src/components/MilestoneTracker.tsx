@@ -33,6 +33,10 @@ export function MilestoneTracker({
   onReject: (index: number, reason: string) => void;
   onDispute: (index: number) => void;
 }) {
+  const firstUnresolvedIndex = contract.milestones.findIndex(
+    (status) => milestoneStatusName(status) !== "approved"
+  );
+
   return (
     <ol className="flex flex-col gap-3">
       {contract.milestones.map((status, index) => {
@@ -50,6 +54,7 @@ export function MilestoneTracker({
             payoutSol={lamportsToSol(payout)}
             role={role}
             isPending={pendingIndex === index}
+            isCurrent={firstUnresolvedIndex === -1 || index === firstUnresolvedIndex}
             onSubmit={() => onSubmit(index)}
             onApprove={() => onApprove(index)}
             onReject={(reason) => onReject(index, reason)}
@@ -68,6 +73,7 @@ function MilestoneRow({
   payoutSol,
   role,
   isPending,
+  isCurrent,
   onSubmit,
   onApprove,
   onReject,
@@ -79,6 +85,7 @@ function MilestoneRow({
   payoutSol: number;
   role: Role;
   isPending: boolean;
+  isCurrent: boolean;
   onSubmit: () => void;
   onApprove: () => void;
   onReject: (reason: string) => void;
@@ -109,6 +116,11 @@ function MilestoneRow({
             {isDisputed && (
               <span className="text-xs text-warning" title="Frozen — resolve off-chain">
                 🔒 frozen
+              </span>
+            )}
+            {!isCurrent && !isApproved && !isDisputed && (
+              <span className="text-xs text-alter-muted" title="Locked until the previous milestone is approved">
+                🔒 waiting on #{index}
               </span>
             )}
           </div>
@@ -147,7 +159,7 @@ function MilestoneRow({
       </AnimatePresence>
 
       {/* Freelancer actions */}
-      {role === "freelancer" && (status === "notSubmitted" || status === "rejected") && (
+      {role === "freelancer" && isCurrent && (status === "notSubmitted" || status === "rejected") && (
         <div className="mt-4 flex gap-2">
           <ActionButton onClick={onSubmit} disabled={isPending} primary>
             {status === "rejected" ? "Resubmit" : "Submit milestone"}
@@ -161,7 +173,7 @@ function MilestoneRow({
       )}
 
       {/* Client actions */}
-      {role === "client" && status === "submitted" && (
+      {role === "client" && isCurrent && status === "submitted" && (
         <div className="mt-4">
           {!rejecting ? (
             <div className="flex gap-2">

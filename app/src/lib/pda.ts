@@ -1,6 +1,13 @@
 import { PublicKey } from "@solana/web3.js";
 import { IDL } from "../types/idl";
 import BN from "bn.js";
+import {
+  TOKEN_2022_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
+
+export { TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID };
 
 export const PROGRAM_ID = new PublicKey(IDL.address);
 
@@ -49,6 +56,31 @@ export function deriveReputationPda(freelancer: PublicKey): PublicKey {
     PROGRAM_ID
   );
   return pda;
+}
+
+/** [b"badge", freelancer.key()] — the Token-2022 badge mint itself */
+export function deriveBadgeMintPda(freelancer: PublicKey): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [enc("badge"), freelancer.toBuffer()],
+    PROGRAM_ID
+  );
+  return pda;
+}
+
+/**
+ * The freelancer's associated token account for their badge mint. Not a
+ * program PDA — derived the standard ATA way, just against the Token-2022
+ * program id instead of the classic Token program.
+ */
+export function deriveBadgeTokenAccount(freelancer: PublicKey): PublicKey {
+  const badgeMint = deriveBadgeMintPda(freelancer);
+  return getAssociatedTokenAddressSync(
+    badgeMint,
+    freelancer,
+    true,
+    TOKEN_2022_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
 }
 
 /**

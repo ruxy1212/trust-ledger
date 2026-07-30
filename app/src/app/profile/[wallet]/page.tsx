@@ -2,8 +2,9 @@
 
 import { use, useEffect, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
+import { useConnection } from "@solana/wallet-adapter-react";
 import { useReadOnlyProgram } from "@/lib/anchor-client";
-import { deriveProfilePda, deriveReputationPda } from "@/lib/pda";
+import { deriveProfilePda, deriveReputationPda, deriveBadgeMintPda } from "@/lib/pda";
 import { shortAddress } from "@/lib/format";
 import { ReputationStat } from "@/components/ReputationStat";
 import { freelancerProfiles, reputationRecords } from "@/types/accounts";
@@ -18,10 +19,12 @@ export default function ProfilePage({
   const { wallet } = use(params);
   const router = useRouter();
   const program = useReadOnlyProgram();
+  const { connection } = useConnection();
 
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
   const [disputedCount, setDisputedCount] = useState(0);
+  const [hasBadge, setHasBadge] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
   let walletPubkey: PublicKey | null = null;
@@ -40,19 +43,23 @@ export default function ProfilePage({
     const w = walletPubkey;
 
     (async () => {
-      const [profile, reputation] = await Promise.all([
+      const [profile, reputation, badgeMintInfo] = await Promise.all([
         freelancerProfiles(program).fetchNullable(deriveProfilePda(w)),
         reputationRecords(program).fetchNullable(deriveReputationPda(w)),
+        connection.getAccountInfo(deriveBadgeMintPda(w)),
       ]);
 
       setDisplayName(profile?.displayName ?? null);
       setCompletedCount(reputation?.completedCount ?? 0);
       setDisputedCount(reputation?.disputedCount ?? 0);
+      // The badge mint is created once, on the freelancer's first-ever
+      // approved milestone — its mere existence on chain IS "has a badge."
+      setHasBadge(badgeMintInfo !== null);
     })();
-  }, [program, walletPubkey]);
+  }, [router, program, connection, walletPubkey]);
 
   if (!walletPubkey || notFound) {
-    return <p className="text-error">{"That's not a valid wallet address."}</p>;
+    return <p className="text-error text-center mt-50">{"That's not a valid wallet address."}</p>;
   }
 
   return (
@@ -60,6 +67,11 @@ export default function ProfilePage({
 
       <h1 className="font-display text-2xl font-bold text-alter-primary">
         {displayName ?? "Unregistered freelancer"}
+        {hasBadge && (
+          <span className="ml-2 align-middle text-sm text-success" title="Completed at least one milestone — badge is non-transferable">
+            ✓ Verified builder
+          </span>
+        )}
       </h1>
       <p className="font-mono text-xs text-alter-muted">{shortAddress(walletPubkey, 6)}</p>
 
