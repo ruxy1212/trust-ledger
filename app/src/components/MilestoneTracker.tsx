@@ -242,7 +242,7 @@ function StatusPill({ status }: { status: string }) {
       {status === "submitted" && (
         <span className="animate-pulse-dot mr-1 inline-block">●</span>
       )}
-      {status}
+      {STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status}
     </motion.span>
   );
 }

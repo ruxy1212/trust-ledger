@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export function Nav() {
+  const { publicKey } = useWallet();
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-(--bg-base)/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-(--container-max) items-center justify-between px-6 py-4">
@@ -13,7 +15,6 @@ export function Nav() {
         >
           Trust<span className="text-gradient">Ledger</span>
         </Link>
-
         <nav className="hidden items-center gap-6 text-sm text-alter-secondary sm:flex">
           <Link href="/hire" className="hover:text-alter-primary">
             Hire
@@ -24,6 +25,9 @@ export function Nav() {
           >
             I&apos;m a freelancer
           </Link>
+          {publicKey && (
+            <Link href="/dashboard" className="hover:text-alter-primary">Dashboard</Link>
+          )}
         </nav>
 
         <WalletMultiButton />
