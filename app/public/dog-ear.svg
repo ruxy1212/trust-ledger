@@ -3,9 +3,9 @@
   <defs>
     <!-- Gradient for flap underside -->
     <linearGradient id="curlGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c6005c"/>
-      <stop offset="90%" stop-color="#c6005c" />
-      <stop offset="100%" stop-color="#888"/>
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="90%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4a4a4a"/>
     </linearGradient>
 
     <!-- Subtle shadow for flap -->
