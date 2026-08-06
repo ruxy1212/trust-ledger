@@ -1,0 +1,30 @@
+<svg width="500" height="500" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <!-- Gradient for flap underside -->
+    <linearGradient id="curlGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c6005c"/>
+      <stop offset="90%" stop-color="#c6005c" />
+      <stop offset="100%" stop-color="#888"/>
+    </linearGradient>
+
+    <!-- Subtle shadow for flap -->
+    <filter id="foldShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Black background -->
+  <polygon points="100,100 100,0 0,100" fill="#eee"/>
+
+  <!-- Red page front -->
+  <polygon points="0,0 0,100 100,0" fill="none"/>
+
+  <!-- Peeled flap on top -->
+  <path
+    d="M0,100 L100,0 Q90,10 40,20 Q20,30 20,40Z"
+    fill="url(#curlGradient)"
+    filter="url(#foldShadow)"
+  />
+
+</svg>

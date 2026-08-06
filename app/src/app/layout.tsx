@@ -7,6 +7,7 @@ import { Nav } from "@/components/Nav";
 import { ReputationAgentWidget } from "@/components/ReputationAgentWidget";
 import "./globals.css";
 import { Provider } from "./provider";
+import DogEarGithub from "@/components/DogEarGithub";
 
 // globals.css's `@theme inline` block expects these four CSS variables:
 // --font-geist-sans, --font-geist-mono, --font-syne, --font-jetbrains.
@@ -45,6 +46,7 @@ export default function RootLayout({
               {children}
             </main>
             <ReputationAgentWidget />
+            <DogEarGithub />
           </Provider>
         </ClientWalletProvider>
       </body>
