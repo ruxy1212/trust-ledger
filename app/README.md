@@ -1,5 +1,7 @@
 # Trust Ledger
 
+<img width="2516" height="1252" alt="100b" src="https://github.com/user-attachments/assets/c5cb90a0-dadd-428d-a00c-556a09f98a9e" />
+
 Trust Ledger is the Day 99 capstone for 100 Days of Solana: a milestone-based escrow app where clients lock funds on-chain, freelancers build a portable reputation, and an AI agent can read the record without taking custody of anything.
 
 The app is built with Next.js, Anchor, and the Solana wallet adapter. It includes:
@@ -57,7 +59,7 @@ http://localhost:3000
 
 ## What It Is For
 
-This project is about proving that a Solana app can do more than store data. It can coordinate work, enforce contract milestones, preserve reputation across sessions, and still leave the wallet owner in control.
+This project is about combining the concepts learnt during the challenges, proving that a Solana app can do more than store data. It can coordinate work, enforce contract milestones, preserve reputation across sessions, and still leave the wallet owner in control.
 
 ## To-Dos
 - A verification badge that can be revoked (using another PDA + Token2022 Extensions)
