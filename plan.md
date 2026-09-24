@@ -14,281 +14,216 @@ This plan covers implementation for the issues identified in the repository revi
 
 ---
 
-## 2) Severity-Ordered Work Plan
+## 2) Step-by-Step Work Plan
 
-## Critical
+### Step 0: Prerequisite Workspace & Build Configuration
 
-### A. Prevent reputation farming and self-dealing
+#### Target behavior
+- Rust workspace manifest correctly points to existing program crate.
+- Cargo and build tools work cleanly from repository root.
+
+#### Implementation steps
+1. **Fix workspace manifest in `Cargo.toml`**
+   - Change `members = ["programs/*"]` to `members = ["program"]`.
+2. **Verify build**
+   - Confirm `cargo check` and program compilation succeed without workspace path errors.
+
+---
+
+### Step 1: Prevent reputation farming and self-dealing (Critical - Section A)
 
 #### Target behavior
 - A client cannot create a contract with themselves as freelancer.
-- A contract must meet a minimum total escrow.
-- Each milestone payout must meet a minimum meaningful value.
-- Reputation should become harder to game than a raw counter.
+- A contract must meet a minimum total escrow (`MIN_ESCROW_LAMPORTS`).
+- Each milestone payout must meet a minimum meaningful floor (`MIN_MILESTONE_PAYOUT_LAMPORTS`).
+- Reputation semantics are hardened against gaming through value-weighted volume and score tracking without unbounded on-chain account bloat.
 
 #### Implementation steps
-1. **Add protocol constraints in program**
-   - Update `/home/runner/work/trust-ledger/trust-ledger/program/src/errors.rs` with new errors:
+1. **Protocol constraints in program**
+   - Update `program/src/errors.rs` with new errors:
      - `SelfContractNotAllowed`
      - `EscrowTooSmall`
      - `MilestonePayoutTooSmall`
-   - Update `/home/runner/work/trust-ledger/trust-ledger/program/src/constants.rs` with minimums:
-     - `MIN_ESCROW_LAMPORTS`
-     - `MIN_MILESTONE_PAYOUT_LAMPORTS`
-   - Enforce in `/home/runner/work/trust-ledger/trust-ledger/program/src/instructions/create_contract.rs`:
+   - Update `program/src/constants.rs` with minimums:
+     - `MIN_ESCROW_LAMPORTS` (e.g. 10_000_000 lamports / 0.01 SOL)
+     - `MIN_MILESTONE_PAYOUT_LAMPORTS` (e.g. 5_000_000 lamports / 0.005 SOL)
+   - Enforce in `program/src/instructions/create_contract.rs`:
      - `client.key() != freelancer.key()`
      - `amount >= MIN_ESCROW_LAMPORTS`
-     - `base_payout > 0` and computed effective payout floor check.
+     - `contract.base_payout >= MIN_MILESTONE_PAYOUT_LAMPORTS`
+2. **Harden reputation semantics in program state**
+   - Extend `ReputationRecord` in `program/src/state.rs`:
+     - Add `pub earned_volume: u64` (total lamports earned from approved milestones).
+     - Add `pub reputation_score: u64` (value-weighted reputation score).
+     - (Note: Unbounded `Vec<Pubkey>` is avoided on-chain to prevent exceeding Solana account size/rent limits.)
+   - Update `program/src/instructions/approve_milestone.rs`:
+     - Accumulate `earned_volume += payout`.
+     - Update `reputation_score` based on payout weight and completion count.
+3. **IDL, Frontend & Test Synchronization**
+   - Synchronize account schemas and IDLs:
+     - `app/src/types/accounts.ts` (`ReputationRecordAccount` fields: `earnedVolume`, `reputationScore`).
+     - `app/src/types/idl.ts` and `app/src/idl/trust_ledger.json`.
+     - `idls/trust_ledger.json`.
+   - Update profile fetchers & components:
+     - `app/src/components/ReputationStat.tsx` (display volume / weighted score).
+     - `app/src/lib/fetch-profiles.ts`.
+   - Update integration tests:
+     - `tests/trust-ledger.ts` (embedded IDL and test assertions).
+     - `app/src/tests/trust-ledger.test.ts`.
+     - Add test cases: reject self-contract, reject low escrow, reject low milestone payout, verify score/volume accumulation.
 
-2. **Harden reputation semantics**
-   - Extend `/home/runner/work/trust-ledger/trust-ledger/program/src/state.rs` `ReputationRecord` to include:
-     - optional value-weighted or score field (e.g. `earned_volume`, `reputation_score`)
-     - optional unique-client tracking strategy (see decision section below)
-   - Update `/home/runner/work/trust-ledger/trust-ledger/program/src/instructions/approve_milestone.rs`:
-     - update score using payout/value and anti-sybil weighting rules.
-
-3. **Backfill frontend expectations**
-   - Update frontend types and display in:
-     - `/home/runner/work/trust-ledger/trust-ledger/app/src/types/accounts.ts`
-     - `/home/runner/work/trust-ledger/trust-ledger/app/src/components/ReputationStat.tsx`
-     - `/home/runner/work/trust-ledger/trust-ledger/app/src/lib/fetch-profiles.ts`
-   - Keep backward-compatible rendering if new fields are absent.
-
-4. **Tests**
-   - Add/extend tests in:
-     - `/home/runner/work/trust-ledger/trust-ledger/tests/trust-ledger.ts`
-     - `/home/runner/work/trust-ledger/trust-ledger/app/src/tests/trust-ledger.test.ts`
-   - Cases:
-     - reject self-contract
-     - reject tiny escrow
-     - reject tiny milestone payouts
-     - reputation scoring behavior across varying payout sizes.
-
-#### Decision: reputation anti-gaming model
-**Options**
-1. Keep simple `completed_count` + add minimum escrow checks only.
-2. Add value-weighted score (`score += f(payout)`), still count-based.
-3. Add value-weighted score + unique-client multiplier/cap (best anti-collusion).
-
-**Recommendation**
-- **Option 3** for strongest abuse resistance while preserving transparency.
+#### Manual Testing Criteria
+- Attempt creating contract where `client == freelancer` -> rejected on-chain.
+- Attempt creating contract with `< MIN_ESCROW_LAMPORTS` -> rejected on-chain.
+- Complete milestone approval -> verify `earned_volume` and `reputation_score` increment appropriately on frontend and in tests.
 
 ---
 
-### B. Add dispute resolution to avoid permanent fund lock
+### Step 2: Dispute Rights Alignment & Dispute Resolution (Critical/High - Sections C & B)
 
 #### Target behavior
-- Disputed milestones can be resolved to one of: release to freelancer, refund to client, or split.
-- Contracts can reach terminal state and optionally close.
+- Both client and freelancer can raise a dispute on a milestone that has been submitted or rejected.
+- Disputed milestones can be settled without permanent escrow lock:
+  - Release to freelancer (milestone approved by dispute settlement).
+  - Refund to client (milestone cancelled/refunded).
+  - Split payout between client and freelancer.
+- Escrow accounting ensures no underflow and preserves the vault rent-exempt reserve.
 
 #### Implementation steps
-1. **Add instruction**
-   - Create `/home/runner/work/trust-ledger/trust-ledger/program/src/instructions/resolve_dispute.rs`.
-   - Wire module in:
-     - `/home/runner/work/trust-ledger/trust-ledger/program/src/instructions.rs`
-     - `/home/runner/work/trust-ledger/trust-ledger/program/src/lib.rs`
-   - Add account validation + signer role constraints.
+1. **Align dispute initiation rights (`program/src/instructions/raise_dispute.rs`)**
+   - Allow signer to be either `client` OR `freelancer` on the contract.
+   - Validate status: milestone can be disputed if submitted or rejected.
+   - Update reputation disputed count appropriately.
+2. **Create dispute resolution instruction (`program/src/instructions/resolve_dispute.rs`)**
+   - Define resolution outcomes: `ReleaseToFreelancer`, `RefundToClient`, `Split`.
+   - Verify signer authority (mutual agreement or contract participants per resolution rules).
+   - Perform vault CPI transfer using vault PDA bump & seeds to freelancer, client, or split.
+   - Update milestone status to resolved/approved/refunded.
+   - Wire module into `program/src/instructions.rs` and `program/src/lib.rs`.
+3. **IDL, Types, Frontend & Test Synchronization**
+   - Update IDLs: `idls/trust_ledger.json`, `app/src/idl/trust_ledger.json`, `app/src/types/idl.ts`.
+   - Update `app/src/types/accounts.ts` and `Contract` status types.
+   - Add dispute resolution controls in `app/src/components/MilestoneTracker.tsx` and `app/src/app/contract/[pda]/page.tsx`.
+   - Update docs (`README.md`, `app/README.md`) to reflect dual dispute permissions and resolution flow.
+   - Add comprehensive tests in `tests/trust-ledger.ts` and `app/src/tests/trust-ledger.test.ts` covering raise dispute (client + freelancer) and resolution outcomes (release, refund, split).
 
-2. **State updates**
-   - Extend `Contract` in `/home/runner/work/trust-ledger/trust-ledger/program/src/state.rs` with fields needed for dispute metadata and resolution status.
-
-3. **Fund movement rules**
-   - Reuse vault signer logic pattern from `approve_milestone`.
-   - Ensure escrow accounting cannot underflow and preserves rent reserve.
-
-4. **Frontend integration**
-   - Add disputed milestone resolution controls for authorized role in:
-     - `/home/runner/work/trust-ledger/trust-ledger/app/src/components/MilestoneTracker.tsx`
-     - `/home/runner/work/trust-ledger/trust-ledger/app/src/app/contract/[pda]/page.tsx`
-
-5. **Tests**
-   - Add success and failure paths for each resolution branch.
-
-#### Decision: who can resolve disputes
-**Options**
-1. Client-only.
-2. Mutual consent (both client and freelancer must approve same outcome).
-3. Arbiter authority PDA (admin/multisig) resolves.
-4. Time-based fallback: mutual consent first, then arbiter or timeout default.
-
-**Recommendation**
-- **Option 4** for balanced UX and trust minimization.
+#### Manual Testing Criteria
+- Raise dispute as client -> succeeds.
+- Raise dispute as freelancer -> succeeds.
+- Resolve dispute with release, refund, or split -> funds transfer accurately from vault to intended wallet(s), vault preserves rent-exempt reserve, milestone marks resolved.
 
 ---
 
-## High
+### Step 3: Harden `/api/agent` with Auth, Validation & Durable Rate Limiting (High - Section D)
 
-### C. Align dispute permissions with product intent
+#### Target behavior
+- `/api/agent` is protected against unauthorized abuse and runaway token spend.
+- Requests require authenticated wallet signature (or nonce verification) so anonymous attackers cannot burn LLM quota.
+- Durable rate limiting via Redis with in-memory fallback for local development.
+- Input validation (schema guards) and error handling on tool calls.
+- Frontend `ReputationAgentWidget.tsx` seamlessly integrates wallet signing so user interaction works smoothly.
 
 #### Implementation steps
-1. Decide whether disputes are freelancer-only or both parties.
-2. If both parties:
-   - update `/home/runner/work/trust-ledger/trust-ledger/program/src/instructions/raise_dispute.rs` constraints.
-   - add explicit checks for authorized signer = client OR freelancer.
-3. Update docs:
-   - `/home/runner/work/trust-ledger/trust-ledger/README.md`
-   - `/home/runner/work/trust-ledger/trust-ledger/app/README.md`
+1. **Wallet signature verification utility**
+   - Add lightweight signature verification helper for Solana wallet signatures in `app/src/lib/auth.ts`.
+2. **Durable rate limiting with local fallback**
+   - Update `app/src/lib/rate-limit.ts` to support Redis (Upstash) when configured, falling back to in-memory store if Redis credentials are not provided.
+   - Enforce distinct limits for `/api/reputation` (public read-only) vs `/api/agent` (authenticated AI).
+3. **Hardened `/api/agent/route.ts`**
+   - Validate request payload schema (using Zod or strict validator).
+   - Verify wallet signature/header before calling LLM.
+   - Safe parsing of tool calling outputs.
+   - Budget guardrails (max request size, per-wallet daily limits, safe error responses 401/429).
+4. **Update `ReputationAgentWidget.tsx`**
+   - Integrate `useWallet` hook.
+   - If wallet is not connected, provide a clear prompt to connect wallet.
+   - Sign message / pass auth headers when sending messages to `/api/agent`.
 
-#### Decision: dispute initiation rights
-**Options**
-1. Freelancer-only.
-2. Both client and freelancer.
-
-**Recommendation**
-- **Option 2** to match stated product behavior and reduce policy confusion.
+#### Manual Testing Criteria
+- Unauthenticated POST to `/api/agent` returns 401 Unauthorized.
+- Malformed JSON / invalid tool inputs return 400 Bad Request without crashing server.
+- Connected wallet in widget sends query and receives AI agent response.
+- Rate-limit thresholds trigger HTTP 429 when exceeded.
 
 ---
 
-### D. Harden `/api/agent` against abuse and runaway spend
+### Step 4: Repository Cleanup, Package Standardization & UX Polish (Medium/Low - Sections E, F, G)
+
+#### Target behavior
+- Repository metadata reflects `trust-ledger` instead of legacy `counter`.
+- Stale counter files are removed.
+- Package manager tooling is standardized across root and app.
+- UI copy and route behaviors are polished and consistent.
 
 #### Implementation steps
-1. **Authentication**
-   - Require signed wallet nonce/session for LLM route usage.
-   - Reject anonymous access to model-backed route.
+1. **Repository & package cleanup (Section E)**
+   - Update root `package.json` name from `counter` to `trust-ledger`.
+   - Remove stale counter files:
+     - `tests/counter.ts`
+     - `idls/counter.json`
+2. **Standardize package management (Section F)**
+   - Standardize on `pnpm` workspace across root and app.
+   - Update `Anchor.toml` scripts from `yarn` to `pnpm`.
+   - Clean redundant lockfiles.
+3. **UX & copy polish (Section G)**
+   - Polish profile page copy and wallet address validations.
+   - Sweep UI text across contract pages, empty states, and error alerts.
 
-2. **Durable rate limiting**
-   - Replace in-memory limiter in `/home/runner/work/trust-ledger/trust-ledger/app/src/lib/rate-limit.ts` with Redis-backed limiter.
-   - Keep endpoint-specific quotas (`/api/reputation` higher, `/api/agent` lower).
-
-3. **Budget guardrails**
-   - Add per-identity/day request caps and token budget checks.
-   - Add graceful 429/402 style responses once limits exceeded.
-
-4. **Input/output hardening**
-   - Guard `JSON.parse` calls in `/home/runner/work/trust-ledger/trust-ledger/app/src/app/api/agent/route.ts`.
-   - Validate tool arguments with schema before execution.
-
-5. **Monitoring**
-   - Add usage logs and alert thresholds for token burn spikes.
-
-#### Decision: access model for agent route
-**Options**
-1. Public endpoint with strict rate limit.
-2. Wallet-authenticated users only.
-3. Registered contract participants only.
-
-**Recommendation**
-- **Option 2 now**, with architecture compatible with Option 3 later.
+#### Manual Testing Criteria
+- Clean install via package manager succeeds.
+- Stale counter artifacts are gone, and test scripts run properly without references to counter.
+- UI flows (profile, contract details, widget) display clear, consistent copy.
 
 ---
 
-## Medium
+### Step 5: Monetization & Fee Architecture Hooks (Strategic - Section H)
 
-### E. Clean repository identity and stale scaffolding
+#### Target behavior
+- Optional protocol fee configuration PDA to capture sustainable revenue without breaking trust.
+- Fee hook on milestone payout and/or arbitration, configurable by protocol admin.
 
 #### Implementation steps
-1. Rename root package metadata from legacy `counter` to trust-ledger naming.
-2. Remove or archive stale counter artifacts:
-   - `/home/runner/work/trust-ledger/trust-ledger/tests/counter.ts`
-   - `/home/runner/work/trust-ledger/trust-ledger/idls/counter.json`
-3. Verify scripts and docs no longer reference old module names.
+1. **Protocol fee config account**
+   - Add `ProtocolConfig` state in `program/src/state.rs` (`fee_recipient: Pubkey`, `fee_basis_points: u16`, `admin: Pubkey`).
+   - Add instruction to initialize / update config (`program/src/instructions/update_config.rs`).
+2. **Monetization hook in milestone payout**
+   - In `approve_milestone.rs` and `resolve_dispute.rs`, if fee is enabled (> 0), transfer fee portion from vault to `fee_recipient`.
+3. **IDL & tests**
+   - Update IDLs and add tests for fee collection and admin configuration updates.
 
-#### Decision: handling stale counter assets
-**Options**
-1. Delete.
-2. Move to `/examples/counter-legacy`.
-3. Keep but clearly mark deprecated.
-
-**Recommendation**
-- **Option 2** if educational value matters, otherwise Option 1.
+#### Manual Testing Criteria
+- Admin can initialize/update fee basis points.
+- Milestone approval correctly splits fee to fee recipient when configured.
 
 ---
 
-### F. Standardize package management and build reproducibility
+## 3) Delivery Phases Overview
 
-#### Implementation steps
-1. Choose package manager standard for root and app.
-2. Remove non-standard lockfiles.
-3. Update contributor docs and CI checks to enforce one manager.
-
-#### Decision: package manager standard
-**Options**
-1. Yarn workspace standard.
-2. pnpm workspace standard.
-
-**Recommendation**
-- **Option 2 (pnpm)** for workspace efficiency and deterministic installs.
+| Phase | Steps | Focus |
+| :--- | :--- | :--- |
+| **Phase 0** | Step 0 | Workspace manifest fix & build verification |
+| **Phase 1** | Step 1, Step 2, Step 3 | Safety first: Anti-farming, dispute permissions & resolution, agent API hardening |
+| **Phase 2** | Step 4 | Stability & consistency: Repo cleanup, package standard, UX/copy polish |
+| **Phase 3** | Step 5 | Commercialization: Protocol fee config and monetization hooks |
 
 ---
 
-## Low
+## 4) Validation Checklist per Step
 
-### G. UX and copy cleanup
-
-#### Implementation steps
-1. Fix profile-page copy issues and minor wording inconsistencies.
-2. Ensure route behavior is intentional for invalid wallets vs unregistered wallets.
-3. Sweep key UI text for clarity and trust language consistency.
-
----
-
-## Profit-Making (Strategic, post-safety)
-
-### H. Add monetization hooks with minimal trust tradeoff
-
-#### Implementation steps
-1. Add protocol fee config PDA with governance/admin update controls.
-2. Apply tiny fee on `approve_milestone` payouts.
-3. Add optional paid dispute arbitration path.
-4. Expose paid reputation API tier (rate and SLA differentiated).
-
-#### Decision: revenue model rollout
-**Options**
-1. Fee on payout only.
-2. Arbitration fees only.
-3. Hybrid (payout fee + arbitration + API tier).
-
-**Recommendation**
-- **Option 3** with low initial fee and explicit fee transparency.
-
----
-
-## 3) Delivery Phases
-
-### Phase 1 (Safety First)
-- A: anti-farming constraints
-- B: dispute resolution instruction
-- C: dispute rights alignment
-- D (minimum subset): auth + durable rate-limit + parser hardening
-
-### Phase 2 (Stability and Consistency)
-- E: repo cleanup
-- F: package/lockfile normalization
-- Complete D monitoring/budget controls
-
-### Phase 3 (Commercialization)
-- H: protocol fee + arbitration + API monetization
-
----
-
-## 4) Validation Checklist per Phase
-
-- Program unit/integration tests pass (`tests/trust-ledger.ts`).
-- Frontend tests pass (`app/src/tests/trust-ledger.test.ts`).
-- Manual contract lifecycle smoke test:
-  - create → submit → approve/reject → dispute → resolve.
-- API abuse test:
-  - invalid payloads, spoofed caller headers, burst traffic.
-- Backward compatibility checks for existing account data where feasible.
+- [ ] Program compilation passes (`cargo check`).
+- [ ] TypeScript compilation and tests pass (`app` and root).
+- [ ] Manual verification performed by user for the step.
+- [ ] Clean, descriptive git commit created before proceeding to next step.
 
 ---
 
 ## 5) Risks and Mitigations
 
 - **Risk:** State schema changes can break existing devnet accounts.  
-  **Mitigation:** use versioned migration strategy or introduce new account fields conservatively with rollout notes.
-
-- **Risk:** Overly strict anti-farming limits reduce legitimate micro-jobs.  
-  **Mitigation:** configurable minimums in constants/governance PDA.
-
-- **Risk:** Added auth friction hurts adoption of reputation lookup tool.  
-  **Mitigation:** keep `/api/reputation/[wallet]` public/read-only and reserve auth for LLM path.
-
----
-
-## 6) Definition of Done
-
-- Critical and High items implemented and tested.
-- Docs accurately reflect actual on-chain permissions and lifecycle.
-- Abuse and deadlock vectors closed.
-- Plan for monetization enabled in code architecture, even if fee switches remain off by default.
+  **Mitigation:** Keep new state fields clean, update TypeScript mirrors and IDLs atomically in each step.
+- **Risk:** Unbounded arrays on Solana accounts cause out-of-space runtime errors.  
+  **Mitigation:** Store scalar scoring metrics (`earned_volume`, `reputation_score`) in `ReputationRecord` instead of unbounded pubkey vectors.
+- **Risk:** Adding authentication breaks the agent chat widget for users.  
+  **Mitigation:** Update `ReputationAgentWidget.tsx` in the same step with wallet sign-in state, and keep `/api/reputation/[wallet]` public.
+- **Risk:** Missing Redis credentials break local development.  
+  **Mitigation:** Support graceful in-memory fallback in `rate-limit.ts` when Redis environment variables are absent.
