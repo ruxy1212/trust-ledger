@@ -19,7 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ wallet: string }> }
 ) {
   const key = callerKey(req);
-  const rate = checkRateLimit(key, LIMIT, WINDOW_MS);
+  const rate = await checkRateLimit(key, LIMIT, WINDOW_MS);
   if (!rate.allowed) {
     return NextResponse.json(
       { error: "Rate limited. Try again shortly." },
