@@ -24,6 +24,8 @@ export default function ProfilePage({
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
   const [disputedCount, setDisputedCount] = useState(0);
+  const [earnedVolume, setEarnedVolume] = useState<BN | undefined>(undefined);
+  const [reputationScore, setReputationScore] = useState<BN | undefined>(undefined);
   const [hasBadge, setHasBadge] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -52,6 +54,8 @@ export default function ProfilePage({
       setDisplayName(profile?.displayName ?? null);
       setCompletedCount(reputation?.completedCount ?? 0);
       setDisputedCount(reputation?.disputedCount ?? 0);
+      setEarnedVolume(reputation?.earnedVolume);
+      setReputationScore(reputation?.reputationScore);
       // The badge mint is created once, on the freelancer's first-ever
       // approved milestone — its mere existence on chain IS "has a badge."
       setHasBadge(badgeMintInfo !== null);
@@ -76,7 +80,13 @@ export default function ProfilePage({
       <p className="font-mono text-xs text-alter-muted">{shortAddress(walletPubkey, 6)}</p>
 
       <div className="mt-4">
-        <ReputationStat completedCount={completedCount} disputedCount={disputedCount} className="text-base" />
+        <ReputationStat
+          completedCount={completedCount}
+          disputedCount={disputedCount}
+          earnedVolume={earnedVolume}
+          reputationScore={reputationScore}
+          className="text-base"
+        />
       </div>
 
       {!displayName && (

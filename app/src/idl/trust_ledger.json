@@ -528,6 +528,21 @@
       "code": 6010,
       "name": "BadgeSetupFailed",
       "msg": "Failed to construct a Token-2022 badge instruction"
+    },
+    {
+      "code": 6011,
+      "name": "SelfContractNotAllowed",
+      "msg": "A client cannot create a contract with themselves as the freelancer"
+    },
+    {
+      "code": 6012,
+      "name": "EscrowTooSmall",
+      "msg": "Contract amount must be at least MIN_ESCROW_LAMPORTS"
+    },
+    {
+      "code": 6013,
+      "name": "MilestonePayoutTooSmall",
+      "msg": "Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS"
     }
   ],
   "types": [
@@ -630,6 +645,14 @@
           {
             "name": "disputed_count",
             "type": "u32"
+          },
+          {
+            "name": "earned_volume",
+            "type": "u64"
+          },
+          {
+            "name": "reputation_score",
+            "type": "u64"
           }
         ]
       }

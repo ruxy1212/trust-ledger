@@ -60,13 +60,17 @@ export async function runAgentTool(name: string, input: { walletAddress: string 
     const displayName = profile ? sanitizeDisplayName(profile.displayName) : "Unregistered freelancer";
     const completedCount = reputation?.completedCount ?? 0;
     const disputedCount = reputation?.disputedCount ?? 0;
+    const earnedVolume = reputation?.earnedVolume ? reputation.earnedVolume.toString() : "0";
+    const reputationScore = reputation?.reputationScore ? reputation.reputationScore.toString() : "0";
 
     return JSON.stringify({
       wallet: walletPubkey.toBase58(),
       displayName,
       completedCount,
       disputedCount,
-      reputationSummary: `${displayName} (${walletPubkey.toBase58()}) has completed ${completedCount} milestone(s) and has ${disputedCount} disputed milestone(s).`,
+      earnedVolume,
+      reputationScore,
+      reputationSummary: `${displayName} (${walletPubkey.toBase58()}) has completed ${completedCount} milestone(s), has ${disputedCount} disputed milestone(s), earned volume of ${earnedVolume} lamports, and a reputation score of ${reputationScore}.`,
     });
   } catch (err) {
     return JSON.stringify({

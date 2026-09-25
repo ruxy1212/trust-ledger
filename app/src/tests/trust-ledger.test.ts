@@ -163,6 +163,8 @@ describe("trust-ledger frontend integration", () => {
     const reputation = await reputationRecords(program).fetchNullable(reputationPda);
     assert.isNotNull(reputation);
     assert.equal(reputation!.completedCount, 1);
+    assert.isTrue(reputation!.earnedVolume.gt(new BN(0)));
+    assert.isTrue(reputation!.reputationScore.gt(new BN(0)));
 
     const mintInfo = await getMint(provider.connection, badgeMint, undefined, TOKEN_2022_PROGRAM_ID);
     assert.equal(mintInfo.decimals, 0);
@@ -437,11 +439,11 @@ describe("trust-ledger frontend integration", () => {
     const { contractPda: contract3, vaultPda: vault3 } = deriveContractPdas(
       client.publicKey, freelancer.publicKey, contractId3
     );
-    const SEVEN = new BN(7);
+    const UNEVEN_AMOUNT = new BN(10_000_007);
     const MS_COUNT = 3;
 
     await program.methods
-      .createContract(contractId3, SEVEN, MS_COUNT)
+      .createContract(contractId3, UNEVEN_AMOUNT, MS_COUNT)
       .accounts({
         contract: contract3,
         vault: vault3,
@@ -452,8 +454,8 @@ describe("trust-ledger frontend integration", () => {
       .rpc();
 
     const contractAcc = await contracts(program).fetch(contract3);
-    assert.equal(contractAcc.basePayout.toNumber(), 2);
-    assert.equal(contractAcc.remainder.toNumber(), 1);
+    assert.equal(contractAcc.basePayout.toNumber(), 3333335);
+    assert.equal(contractAcc.remainder.toNumber(), 2);
 
     for (let i = 0; i < MS_COUNT; i++) {
       await program.methods
@@ -564,5 +566,76 @@ describe("trust-ledger frontend integration", () => {
 
     const badgeAccount = await getAccount(provider.connection, badgeTokenAccount, undefined, TOKEN_2022_PROGRAM_ID);
     assert.equal(badgeAccount.amount.toString(), "1");
+  });
+
+  it("15. rejects self-dealing contract creation where client == freelancer", async () => {
+    const selfContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: selfContract, vaultPda: selfVault } = deriveContractPdas(
+      client.publicKey, client.publicKey, selfContractId
+    );
+
+    try {
+      await program.methods
+        .createContract(selfContractId, new BN(0.1 * LAMPORTS_PER_SOL), 1)
+        .accounts({
+          contract: selfContract,
+          vault: selfVault,
+          client: client.publicKey,
+          freelancer: client.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Self-contract creation should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "SelfContractNotAllowed");
+    }
+  });
+
+  it("16. rejects contract creation below MIN_ESCROW_LAMPORTS (0.01 SOL)", async () => {
+    const tinyContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: tinyContract, vaultPda: tinyVault } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, tinyContractId
+    );
+
+    try {
+      await program.methods
+        .createContract(tinyContractId, new BN(5_000_000), 1) // 0.005 SOL < 0.01 SOL
+        .accounts({
+          contract: tinyContract,
+          vault: tinyVault,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Contract with escrow below minimum should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "EscrowTooSmall");
+    }
+  });
+
+  it("17. rejects contract creation where milestone payout is below MIN_MILESTONE_PAYOUT_LAMPORTS", async () => {
+    const microContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: microContract, vaultPda: microVault } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, microContractId
+    );
+
+    try {
+      // 0.01 SOL (10_000_000) across 10 milestones gives base_payout = 1_000_000,
+      // which is below MIN_MILESTONE_PAYOUT_LAMPORTS (2_000_000 = 0.002 SOL)
+      await program.methods
+        .createContract(microContractId, new BN(10_000_000), 10)
+        .accounts({
+          contract: microContract,
+          vault: microVault,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Contract with milestone payout below floor should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "MilestonePayoutTooSmall");
+    }
   });
 });

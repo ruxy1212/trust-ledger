@@ -479,6 +479,36 @@ type TrustLedger = {
       "code": 6007,
       "name": "reasonTooLong",
       "msg": "Rejection reason is too long (max 200 chars)"
+    },
+    {
+      "code": 6008,
+      "name": "previousMilestoneNotApproved",
+      "msg": "The previous milestone must be approved before this one can be submitted"
+    },
+    {
+      "code": 6009,
+      "name": "invalidBadgeTokenAccount",
+      "msg": "badge_token_account is not the freelancer's associated token account for badge_mint"
+    },
+    {
+      "code": 6010,
+      "name": "badgeSetupFailed",
+      "msg": "Failed to construct a Token-2022 badge instruction"
+    },
+    {
+      "code": 6011,
+      "name": "selfContractNotAllowed",
+      "msg": "A client cannot create a contract with themselves as the freelancer"
+    },
+    {
+      "code": 6012,
+      "name": "escrowTooSmall",
+      "msg": "Contract amount must be at least MIN_ESCROW_LAMPORTS"
+    },
+    {
+      "code": 6013,
+      "name": "milestonePayoutTooSmall",
+      "msg": "Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS"
     }
   ],
   "types": [
@@ -581,6 +611,14 @@ type TrustLedger = {
           {
             "name": "disputedCount",
             "type": "u32"
+          },
+          {
+            "name": "earnedVolume",
+            "type": "u64"
+          },
+          {
+            "name": "reputationScore",
+            "type": "u64"
           }
         ]
       }
@@ -1069,20 +1107,17 @@ describe("trust-ledger", () => {
 
   // ── Test 12 ─────────────────────────────────────────────────────────────────
   it("12. vault empties exactly when amount does not divide evenly", async () => {
-    // 7 lamports across 3 milestones: base_payout=2, remainder=1
-    // milestone 0 → 2, milestone 1 → 2, milestone 2 → 2+1=3 → total = 7
+    // 10_000_007 lamports across 3 milestones: base_payout=3333335, remainder=2
+    // milestone 0 → 3333335, milestone 1 → 3333335, milestone 2 → 3333335+2=3333337 → total = 10_000_007
     const contractId3 = new BN(Math.floor(Math.random() * 1_000_000));
     const { contractPda: contract3, vaultPda: vault3 } = deriveContractPdas(
       client.publicKey, freelancer.publicKey, contractId3
     );
-    // Use enough SOL to cover rent + small amount. Anchor requires the vault to pay
-    // its own rent, so we send enough to cover rent + 7 lamports worth of escrow.
-    // We test the math by reading vault balance before and after each approval.
-    const SEVEN = new BN(7);
+    const UNEVEN_AMOUNT = new BN(10_000_007);
     const MS_COUNT = 3;
 
     await program.methods
-      .createContract(contractId3, SEVEN, MS_COUNT)
+      .createContract(contractId3, UNEVEN_AMOUNT, MS_COUNT)
       .accounts({
         contract: contract3,
         vault: vault3,
@@ -1093,8 +1128,8 @@ describe("trust-ledger", () => {
       .rpc();
 
     const contractAcc = await program.account.contract.fetch(contract3);
-    assert.equal(contractAcc.basePayout.toNumber(), 2, "base_payout = 7 / 3 = 2");
-    assert.equal(contractAcc.remainder.toNumber(), 1, "remainder = 7 % 3 = 1");
+    assert.equal(contractAcc.basePayout.toNumber(), 3333335, "base_payout = 10000007 / 3 = 3333335");
+    assert.equal(contractAcc.remainder.toNumber(), 2, "remainder = 10000007 % 3 = 2");
 
     // Approve all 3 milestones and track vault balance
     for (let i = 0; i < MS_COUNT; i++) {
@@ -1220,5 +1255,79 @@ describe("trust-ledger", () => {
 
     const badgeAccount = await getAccount(provider.connection, badgeTokenAccount, undefined, TOKEN_2022_PROGRAM_ID);
     assert.equal(badgeAccount.amount.toString(), "1", "badge should still be held by the freelancer");
+  });
+
+  // ── Test 15 ─────────────────────────────────────────────────────────────────
+  it("15. rejects self-dealing contract creation where client == freelancer", async () => {
+    const selfContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: selfContract, vaultPda: selfVault } = deriveContractPdas(
+      client.publicKey, client.publicKey, selfContractId
+    );
+
+    try {
+      await program.methods
+        .createContract(selfContractId, new BN(0.1 * anchor.web3.LAMPORTS_PER_SOL), 1)
+        .accounts({
+          contract: selfContract,
+          vault: selfVault,
+          client: client.publicKey,
+          freelancer: client.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Self-contract creation should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "SelfContractNotAllowed");
+    }
+  });
+
+  // ── Test 16 ─────────────────────────────────────────────────────────────────
+  it("16. rejects contract creation below MIN_ESCROW_LAMPORTS (0.01 SOL)", async () => {
+    const tinyContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: tinyContract, vaultPda: tinyVault } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, tinyContractId
+    );
+
+    try {
+      await program.methods
+        .createContract(tinyContractId, new BN(5_000_000), 1) // 0.005 SOL < 0.01 SOL
+        .accounts({
+          contract: tinyContract,
+          vault: tinyVault,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Contract with escrow below minimum should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "EscrowTooSmall");
+    }
+  });
+
+  // ── Test 17 ─────────────────────────────────────────────────────────────────
+  it("17. rejects contract creation where milestone payout is below MIN_MILESTONE_PAYOUT_LAMPORTS", async () => {
+    const microContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: microContract, vaultPda: microVault } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, microContractId
+    );
+
+    try {
+      // 0.01 SOL (10_000_000) across 10 milestones gives base_payout = 1_000_000,
+      // which is below MIN_MILESTONE_PAYOUT_LAMPORTS (2_000_000 = 0.002 SOL)
+      await program.methods
+        .createContract(microContractId, new BN(10_000_000), 10)
+        .accounts({
+          contract: microContract,
+          vault: microVault,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Contract with milestone payout below floor should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "MilestonePayoutTooSmall");
+    }
   });
 });

@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import { Program } from "@anchor-lang/core";
 import { PublicKey } from "@solana/web3.js";
 import { freelancerProfiles, reputationRecords } from "../types/accounts";
@@ -8,6 +9,8 @@ export type FreelancerOption = {
   displayName: string;
   completedCount: number;
   disputedCount: number;
+  earnedVolume: BN;
+  reputationScore: BN;
 };
 
 /**
@@ -38,6 +41,8 @@ export async function fetchFreelancerOptions(
       displayName: p.account.displayName,
       completedCount: rep ? rep.completedCount : 0,
       disputedCount: rep ? rep.disputedCount : 0,
+      earnedVolume: rep?.earnedVolume ?? new BN(0),
+      reputationScore: rep?.reputationScore ?? new BN(0),
     };
   });
 }

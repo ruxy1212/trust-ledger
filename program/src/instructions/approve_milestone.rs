@@ -116,6 +116,10 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
 
     let reputation = &mut ctx.accounts.reputation;
     reputation.completed_count += 1;
+    reputation.earned_volume = reputation.earned_volume.saturating_add(payout);
+    // Value-weighted score: 100 base points per approved milestone + 1 point per 100,000 lamports (0.0001 SOL) earned
+    let volume_bonus = payout / 100_000;
+    reputation.reputation_score = reputation.reputation_score.saturating_add(100 + volume_bonus);
 
     // Mint the non-transferable badge exactly once, on the freelancer's
     // first-ever completion across any contract.

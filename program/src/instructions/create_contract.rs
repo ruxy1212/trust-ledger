@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 use crate::state::{Contract, MilestoneStatus};
-use crate::constants::{CONTRACT_SEED, VAULT_SEED};
+use crate::constants::{CONTRACT_SEED, VAULT_SEED, MIN_ESCROW_LAMPORTS, MIN_MILESTONE_PAYOUT_LAMPORTS};
 use crate::errors::CapstoneError;
 
 #[derive(Accounts)]
@@ -29,15 +29,23 @@ pub struct CreateContract<'info> {
 }
 
 pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, milestone_count: u8) -> Result<()> {
+    require!(
+        ctx.accounts.client.key() != ctx.accounts.freelancer.key(),
+        CapstoneError::SelfContractNotAllowed
+    );
+    require!(amount >= MIN_ESCROW_LAMPORTS, CapstoneError::EscrowTooSmall);
     require!(milestone_count > 0, CapstoneError::InvalidMilestoneCount);
     require!(milestone_count <= 10, CapstoneError::MilestoneOutOfRange);
+
+    let base_payout = amount / (milestone_count as u64);
+    require!(base_payout >= MIN_MILESTONE_PAYOUT_LAMPORTS, CapstoneError::MilestonePayoutTooSmall);
 
     let contract = &mut ctx.accounts.contract;
     contract.client = ctx.accounts.client.key();
     contract.freelancer = ctx.accounts.freelancer.key();
     contract.amount = amount;
     contract.milestone_count = milestone_count;
-    contract.base_payout = amount / (milestone_count as u64);
+    contract.base_payout = base_payout;
     contract.remainder = amount % (milestone_count as u64);
 
     let mut milestones = Vec::new();

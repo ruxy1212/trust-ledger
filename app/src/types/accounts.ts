@@ -33,6 +33,8 @@ export interface FreelancerProfileAccount {
 export interface ReputationRecordAccount {
   completedCount: number;
   disputedCount: number;
+  earnedVolume: BN;
+  reputationScore: BN;
 }
 
 type AnyProgram = Program<any>;

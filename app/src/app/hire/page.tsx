@@ -46,11 +46,18 @@ export default function HirePage() {
   }
 
   const amount = Number(amountSol);
+  const isSelf = !!publicKey && !!freelancerPubkey && publicKey.equals(freelancerPubkey);
+  const isAmountTooLow = amount < 0.01;
+  const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < 0.001;
+
   const canSubmit =
+    status !== "submitting" &&
     !!program &&
     !!publicKey &&
     !!freelancerPubkey &&
-    amount > 0 &&
+    !isSelf &&
+    !isAmountTooLow &&
+    !isMilestonePayoutTooLow &&
     milestoneCount >= 1 &&
     milestoneCount <= 10;
 
@@ -168,6 +175,12 @@ export default function HirePage() {
           {freelancerAddress && !freelancerPubkey && (
             <p className="mt-2 text-sm text-error">Not a valid Solana address.</p>
           )}
+
+          {isSelf && (
+            <p className="mt-2 text-sm text-error">
+              You cannot hire yourself. Please select or paste a different freelancer wallet.
+            </p>
+          )}
         </div>
 
         <label className="flex flex-col gap-2 text-sm text-alter-secondary">
@@ -175,12 +188,17 @@ export default function HirePage() {
           <input
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             value={amountSol}
             onChange={(e) => setAmountSol(e.target.value)}
             className="rounded-md border border-border bg-elevated px-3 py-2 font-mono text-alter-primary outline-none focus-visible:border-primary"
           />
         </label>
+        {isAmountTooLow && amount > 0 && (
+          <p className="text-xs text-error">
+            Minimum contract escrow is 0.01 SOL (anti-farming floor).
+          </p>
+        )}
 
         <label className="flex flex-col gap-2 text-sm text-alter-secondary">
           Number of milestones (1–10)
@@ -193,6 +211,11 @@ export default function HirePage() {
             className="rounded-md border border-border bg-elevated px-3 py-2 font-mono text-alter-primary outline-none focus-visible:border-primary"
           />
         </label>
+        {isMilestonePayoutTooLow && !isAmountTooLow && (
+          <p className="text-xs text-error">
+            Each milestone payout must be at least 0.001 SOL.
+          </p>
+        )}
 
         {amount > 0 && milestoneCount > 0 && (
           <p className="font-mono text-xs text-alter-muted">

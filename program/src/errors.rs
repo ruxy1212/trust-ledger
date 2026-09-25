@@ -24,4 +24,10 @@ pub enum CapstoneError {
     InvalidBadgeTokenAccount,
     #[msg("Failed to construct a Token-2022 badge instruction")]
     BadgeSetupFailed,
+    #[msg("A client cannot create a contract with themselves as the freelancer")]
+    SelfContractNotAllowed,
+    #[msg("Contract amount must be at least MIN_ESCROW_LAMPORTS")]
+    EscrowTooSmall,
+    #[msg("Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS")]
+    MilestonePayoutTooSmall,
 }

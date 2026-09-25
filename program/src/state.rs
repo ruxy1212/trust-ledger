@@ -22,6 +22,8 @@ pub struct FreelancerProfile {
 pub struct ReputationRecord {
     pub completed_count: u32,
     pub disputed_count: u32,
+    pub earned_volume: u64,
+    pub reputation_score: u64,
 }
 
 #[account]

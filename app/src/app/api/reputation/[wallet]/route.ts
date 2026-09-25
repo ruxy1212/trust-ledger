@@ -46,5 +46,7 @@ export async function GET(
     displayName: profile?.displayName ?? null,
     completedCount: reputation?.completedCount ?? 0,
     disputedCount: reputation?.disputedCount ?? 0,
+    earnedVolume: reputation?.earnedVolume ? reputation.earnedVolume.toString() : "0",
+    reputationScore: reputation?.reputationScore ? reputation.reputationScore.toString() : "0",
   });
 }
