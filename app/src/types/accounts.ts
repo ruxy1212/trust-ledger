@@ -54,7 +54,15 @@ export type MilestoneStatus =
   | { submitted: Record<string, never> }
   | { approved: Record<string, never> }
   | { rejected: Record<string, never> }
-  | { disputed: Record<string, never> };
+  | { disputed: Record<string, never> }
+  | { resolvedRelease: Record<string, never> }
+  | { resolvedRefund: Record<string, never> }
+  | { resolvedSplit: Record<string, never> };
+
+export type DisputeResolution =
+  | { releaseToFreelancer: Record<string, never> }
+  | { refundToClient: Record<string, never> }
+  | { split: Record<string, never> };
 
 export interface ContractAccount {
   client: PublicKey;
@@ -65,6 +73,7 @@ export interface ContractAccount {
   remainder: BN;
   milestones: MilestoneStatus[];
   rejectionReasons: string[];
+  disputeResolutions: (DisputeResolution | null)[];
 }
 
 interface ContractClient {

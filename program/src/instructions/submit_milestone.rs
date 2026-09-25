@@ -27,12 +27,15 @@ pub fn handler(ctx: Context<SubmitMilestone>, index: u8) -> Result<()> {
     );
 
     // Milestones must be worked in order. Index 0 has no predecessor; every
-    // other index requires the one before it to already be Approved — this
-    // is what stops milestone 5 from being submitted (and later approved)
-    // while 1-4 are still sitting untouched.
+    // other index requires the one before it to already be settled (Approved or Resolved)
     if index > 0 {
+        let prev_status = contract.milestones[(index - 1) as usize];
+        let is_prev_settled = prev_status == MilestoneStatus::Approved
+            || prev_status == MilestoneStatus::ResolvedRelease
+            || prev_status == MilestoneStatus::ResolvedRefund
+            || prev_status == MilestoneStatus::ResolvedSplit;
         require!(
-            contract.milestones[(index - 1) as usize] == MilestoneStatus::Approved,
+            is_prev_settled,
             CapstoneError::PreviousMilestoneNotApproved
         );
     }

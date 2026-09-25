@@ -317,12 +317,16 @@
           "writable": true
         },
         {
-          "name": "freelancer",
+          "name": "caller",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "contract"
-          ]
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "freelancer",
+          "writable": true
         },
         {
           "name": "reputation",
@@ -360,6 +364,139 @@
         {
           "name": "index",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "resolve_dispute",
+      "discriminator": [
+        231,
+        6,
+        202,
+        6,
+        96,
+        103,
+        12,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contract"
+              }
+            ]
+          }
+        },
+        {
+          "name": "caller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "client",
+          "writable": true
+        },
+        {
+          "name": "freelancer",
+          "writable": true
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "badge_mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  100,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "badge_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "resolution",
+          "type": {
+            "defined": {
+              "name": "DisputeResolution"
+            }
+          }
         }
       ]
     },
@@ -543,6 +680,21 @@
       "code": 6013,
       "name": "MilestonePayoutTooSmall",
       "msg": "Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS"
+    },
+    {
+      "code": 6014,
+      "name": "MilestoneNotDisputable",
+      "msg": "Milestone must be in Submitted or Rejected state to raise a dispute"
+    },
+    {
+      "code": 6015,
+      "name": "MilestoneNotDisputed",
+      "msg": "Milestone must be in Disputed state to be resolved"
+    },
+    {
+      "code": 6016,
+      "name": "DisputeResolutionMismatch",
+      "msg": "Dispute resolution requires matching agreement or unilateral concession"
     }
   ],
   "types": [
@@ -590,6 +742,18 @@
             "type": {
               "vec": "string"
             }
+          },
+          {
+            "name": "dispute_resolutions",
+            "type": {
+              "vec": {
+                "option": {
+                  "defined": {
+                    "name": "DisputeResolution"
+                  }
+                }
+              }
+            }
           }
         ]
       }
@@ -629,6 +793,32 @@
           },
           {
             "name": "Disputed"
+          },
+          {
+            "name": "ResolvedRelease"
+          },
+          {
+            "name": "ResolvedRefund"
+          },
+          {
+            "name": "ResolvedSplit"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeResolution",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ReleaseToFreelancer"
+          },
+          {
+            "name": "RefundToClient"
+          },
+          {
+            "name": "Split"
           }
         ]
       }

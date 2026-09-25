@@ -283,12 +283,16 @@ type TrustLedger = {
           "writable": true
         },
         {
-          "name": "freelancer",
+          "name": "caller",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "contract"
-          ]
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "freelancer",
+          "writable": true
         },
         {
           "name": "reputation",
@@ -326,6 +330,139 @@ type TrustLedger = {
         {
           "name": "index",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "resolveDispute",
+      "discriminator": [
+        231,
+        6,
+        202,
+        6,
+        96,
+        103,
+        12,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "contract",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contract"
+              }
+            ]
+          }
+        },
+        {
+          "name": "caller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "client",
+          "writable": true
+        },
+        {
+          "name": "freelancer",
+          "writable": true
+        },
+        {
+          "name": "reputation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  112,
+                  117,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "badgeMint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  100,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "badgeTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "resolution",
+          "type": {
+            "defined": {
+              "name": "disputeResolution"
+            }
+          }
         }
       ]
     },
@@ -509,6 +646,21 @@ type TrustLedger = {
       "code": 6013,
       "name": "milestonePayoutTooSmall",
       "msg": "Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS"
+    },
+    {
+      "code": 6014,
+      "name": "milestoneNotDisputable",
+      "msg": "Milestone must be in Submitted or Rejected state to raise a dispute"
+    },
+    {
+      "code": 6015,
+      "name": "milestoneNotDisputed",
+      "msg": "Milestone must be in Disputed state to be resolved"
+    },
+    {
+      "code": 6016,
+      "name": "disputeResolutionMismatch",
+      "msg": "Dispute resolution requires matching agreement or unilateral concession"
     }
   ],
   "types": [
@@ -556,6 +708,18 @@ type TrustLedger = {
             "type": {
               "vec": "string"
             }
+          },
+          {
+            "name": "disputeResolutions",
+            "type": {
+              "vec": {
+                "option": {
+                  "defined": {
+                    "name": "disputeResolution"
+                  }
+                }
+              }
+            }
           }
         ]
       }
@@ -595,6 +759,32 @@ type TrustLedger = {
           },
           {
             "name": "disputed"
+          },
+          {
+            "name": "resolvedRelease"
+          },
+          {
+            "name": "resolvedRefund"
+          },
+          {
+            "name": "resolvedSplit"
+          }
+        ]
+      }
+    },
+    {
+      "name": "disputeResolution",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "releaseToFreelancer"
+          },
+          {
+            "name": "refundToClient"
+          },
+          {
+            "name": "split"
           }
         ]
       }
@@ -974,6 +1164,8 @@ describe("trust-ledger", () => {
       .raiseDispute(2)
       .accounts({
         contract: contractPda,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
         freelancer: freelancer.publicKey,
         reputation: reputationPda,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -1329,5 +1521,226 @@ describe("trust-ledger", () => {
     } catch (err: any) {
       assert.include(err.toString(), "MilestonePayoutTooSmall");
     }
+  });
+
+  // ── Test 18 ─────────────────────────────────────────────────────────────────
+  it("18. client unilaterally resolves dispute via ReleaseToFreelancer", async () => {
+    const freelancerPreBal = await provider.connection.getBalance(freelancer.publicKey);
+
+    // Resolve milestone 2 on contractPda (disputed in test 8)
+    await program.methods
+      .resolveDispute(2, { releaseToFreelancer: {} })
+      .accounts({
+        contract: contractPda,
+        vault: vaultPda,
+        caller: client.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint: badgeMint,
+        badgeTokenAccount: badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    const contractAcc = await program.account.contract.fetch(contractPda);
+    assert.deepEqual(contractAcc.milestones[2], { resolvedRelease: {} });
+
+    const freelancerPostBal = await provider.connection.getBalance(freelancer.publicKey);
+    assert.approximately(
+      freelancerPostBal - freelancerPreBal,
+      0.5 * anchor.web3.LAMPORTS_PER_SOL,
+      0.01 * anchor.web3.LAMPORTS_PER_SOL
+    );
+  });
+
+  // ── Test 19 ─────────────────────────────────────────────────────────────────
+  it("19. client can raise dispute directly on a submitted milestone", async () => {
+    const contractId4 = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: contract4, vaultPda: vault4 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId4
+    );
+
+    await program.methods
+      .createContract(contractId4, new BN(40_000_000), 2) // 0.04 SOL across 2 milestones = 0.02 SOL each
+      .accounts({
+        contract: contract4,
+        vault: vault4,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    // Freelancer submits milestone 0
+    await program.methods
+      .submitMilestone(0)
+      .accounts({
+        contract: contract4,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    // Client raises dispute directly while in Submitted status
+    await program.methods
+      .raiseDispute(0)
+      .accounts({
+        contract: contract4,
+        caller: client.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    const contractAcc = await program.account.contract.fetch(contract4);
+    assert.deepEqual(contractAcc.milestones[0], { disputed: {} });
+  });
+
+  // ── Test 20 ─────────────────────────────────────────────────────────────────
+  it("20. freelancer unilaterally resolves dispute via RefundToClient and allows pipeline progression", async () => {
+    // contract4 milestone 0 was disputed in test 19
+    const contractId4 = (await program.account.contract.all()).find(
+      (c) => c.account.amount.toNumber() === 40_000_000 && c.account.milestoneCount === 2
+    );
+    assert.isDefined(contractId4);
+    const contract4 = contractId4!.publicKey;
+    const { vaultPda: vault4 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId4!.account.contractId
+    );
+
+    const clientPreBal = await provider.connection.getBalance(client.publicKey);
+
+    // Freelancer resolves milestone 0 with RefundToClient
+    await program.methods
+      .resolveDispute(0, { refundToClient: {} })
+      .accounts({
+        contract: contract4,
+        vault: vault4,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint: badgeMint,
+        badgeTokenAccount: badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    const contractAcc = await program.account.contract.fetch(contract4);
+    assert.deepEqual(contractAcc.milestones[0], { resolvedRefund: {} });
+
+    const clientPostBal = await provider.connection.getBalance(client.publicKey);
+    assert.approximately(
+      clientPostBal - clientPreBal,
+      0.02 * anchor.web3.LAMPORTS_PER_SOL,
+      0.01 * anchor.web3.LAMPORTS_PER_SOL
+    );
+
+    // Pipeline deadlock check: milestone 1 can now be submitted because milestone 0 is settled
+    await program.methods
+      .submitMilestone(1)
+      .accounts({
+        contract: contract4,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    const contractAfterSubmit = await program.account.contract.fetch(contract4);
+    assert.deepEqual(contractAfterSubmit.milestones[1], { submitted: {} });
+  });
+
+  // ── Test 21 ─────────────────────────────────────────────────────────────────
+  it("21. mutual agreement via Split resolves dispute", async () => {
+    const contractId5 = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: contract5, vaultPda: vault5 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId5
+    );
+
+    await program.methods
+      .createContract(contractId5, new BN(20_000_000), 1) // 0.02 SOL
+      .accounts({
+        contract: contract5,
+        vault: vault5,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    await program.methods
+      .submitMilestone(0)
+      .accounts({
+        contract: contract5,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    await program.methods
+      .raiseDispute(0)
+      .accounts({
+        contract: contract5,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    // Freelancer proposes Split
+    await program.methods
+      .resolveDispute(0, { split: {} })
+      .accounts({
+        contract: contract5,
+        vault: vault5,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint: badgeMint,
+        badgeTokenAccount: badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    let contractAcc = await program.account.contract.fetch(contract5);
+    // Still disputed awaiting client matching proposal
+    assert.deepEqual(contractAcc.milestones[0], { disputed: {} });
+    assert.deepEqual(contractAcc.disputeResolutions[0], { split: {} });
+
+    // Client matches Split proposal
+    await program.methods
+      .resolveDispute(0, { split: {} })
+      .accounts({
+        contract: contract5,
+        vault: vault5,
+        caller: client.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint: badgeMint,
+        badgeTokenAccount: badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    contractAcc = await program.account.contract.fetch(contract5);
+    assert.deepEqual(contractAcc.milestones[0], { resolvedSplit: {} });
   });
 });

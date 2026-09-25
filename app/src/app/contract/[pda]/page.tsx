@@ -81,9 +81,10 @@ export default function ContractPage({
     ? "freelancer"
     : "viewer";
 
-  const completed = contract.milestones.filter(
-    (m) => Object.keys(m as object)[0] === "approved"
-  ).length;
+  const completed = contract.milestones.filter((m) => {
+    const k = Object.keys(m as object)[0];
+    return k === "approved" || k === "resolvedRelease" || k === "resolvedRefund" || k === "resolvedSplit";
+  }).length;
 
   async function runAction(index: number, action: () => Promise<void>) {
     setPendingIndex(index);
@@ -154,8 +155,43 @@ export default function ContractPage({
         .raiseDispute(index)
         .accounts({
           contract: contractPda,
-          freelancer: publicKey,
+          caller: publicKey,
+          client: contract.client,
+          freelancer: contract.freelancer,
           reputation: reputationPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc()
+        .then(() => {})
+    );
+  }
+
+  async function handleResolve(
+    index: number,
+    resolution: "releaseToFreelancer" | "refundToClient" | "split"
+  ) {
+    if (!program || !publicKey || !contractPda || !contract) return;
+    const vaultPda = deriveVaultPda(contractPda);
+    const reputationPda = deriveReputationPda(contract.freelancer);
+    const badgeMintPda = deriveBadgeMintPda(contract.freelancer);
+    const badgeTokenAccount = deriveBadgeTokenAccount(contract.freelancer);
+
+    const resolutionArg = { [resolution]: {} };
+
+    await runAction(index, () =>
+      program.methods
+        .resolveDispute(index, resolutionArg as any)
+        .accounts({
+          contract: contractPda,
+          vault: vaultPda,
+          caller: publicKey,
+          client: contract.client,
+          freelancer: contract.freelancer,
+          reputation: reputationPda,
+          badgeMint: badgeMintPda,
+          badgeTokenAccount: badgeTokenAccount,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         })
         .rpc()
@@ -199,6 +235,7 @@ export default function ContractPage({
         onApprove={handleApprove}
         onReject={handleReject}
         onDispute={handleDispute}
+        onResolve={handleResolve}
       />
       <div className="flex flex-wrap items-center justify-center py-8 gap-4">
         <Link

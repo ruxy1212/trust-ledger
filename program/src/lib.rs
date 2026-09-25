@@ -48,4 +48,12 @@ pub mod trust_ledger {
     pub fn raise_dispute(ctx: Context<RaiseDispute>, index: u8) -> Result<()> {
         raise_dispute::handler(ctx, index)
     }
+
+    pub fn resolve_dispute(
+        ctx: Context<ResolveDispute>,
+        index: u8,
+        resolution: DisputeResolution,
+    ) -> Result<()> {
+        resolve_dispute::handler(ctx, index, resolution)
+    }
 }

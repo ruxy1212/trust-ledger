@@ -63,5 +63,5 @@ This project is about combining the concepts learnt during the challenges, provi
 
 ## To-Dos
 - A verification badge that can be revoked (using another PDA + Token2022 Extensions)
-- Dispute handling (for now, when a dispute is created, the funds stay locked in the vault)
+- [x] Dispute handling: both client and freelancer can raise disputes, and resolve them via release, refund, or mutual 50/50 split
 - UI Adjustments, the flow is not yet smooth, across the entire app.

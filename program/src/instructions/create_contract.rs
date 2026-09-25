@@ -50,12 +50,15 @@ pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, mil
 
     let mut milestones = Vec::new();
     let mut reasons = Vec::new();
+    let mut dispute_resolutions = Vec::new();
     for _ in 0..milestone_count {
         milestones.push(MilestoneStatus::NotSubmitted);
         reasons.push(String::new());
+        dispute_resolutions.push(None);
     }
     contract.milestones = milestones;
     contract.rejection_reasons = reasons;
+    contract.dispute_resolutions = dispute_resolutions;
 
     // The vault is a bare System-owned PDA (no account data of its own), so it needs
     // its own rent-exempt reserve independent of the escrowed `amount`. Without this,

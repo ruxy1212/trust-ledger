@@ -4,6 +4,7 @@ pub mod submit_milestone;
 pub mod approve_milestone;
 pub mod reject_milestone;
 pub mod raise_dispute;
+pub mod resolve_dispute;
 
 // Re-export only the Accounts structs so lib.rs can reference them in Context<T>.
 // Handler functions stay namespaced (e.g. `create_profile::handler`) to avoid
@@ -14,3 +15,4 @@ pub use submit_milestone::*;
 pub use approve_milestone::*;
 pub use reject_milestone::*;
 pub use raise_dispute::*;
+pub use resolve_dispute::*;

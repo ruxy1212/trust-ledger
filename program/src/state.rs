@@ -1,12 +1,22 @@
 use anchor_lang::prelude::*;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace, Debug)]
 pub enum MilestoneStatus {
     NotSubmitted,
     Submitted,
     Approved,
     Rejected,
     Disputed,
+    ResolvedRelease,
+    ResolvedRefund,
+    ResolvedSplit,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace, Debug)]
+pub enum DisputeResolution {
+    ReleaseToFreelancer,
+    RefundToClient,
+    Split,
 }
 
 #[account]
@@ -39,4 +49,6 @@ pub struct Contract {
     pub milestones: Vec<MilestoneStatus>,
     #[max_len(10, 200)] // Array of rejection reasons per milestone index
     pub rejection_reasons: Vec<String>,
+    #[max_len(10)]
+    pub dispute_resolutions: Vec<Option<DisputeResolution>>,
 }

@@ -12,6 +12,7 @@ export type ContractView = {
   milestoneCount: number;
   milestones: unknown[]; // decoded MilestoneStatus enum objects
   rejectionReasons: string[];
+  disputeResolutions?: (unknown | null)[];
   basePayout: BN;
   remainder: BN;
 };
@@ -24,6 +25,7 @@ export function MilestoneTracker({
   onApprove,
   onReject,
   onDispute,
+  onResolve,
 }: {
   contract: ContractView;
   role: Role;
@@ -32,9 +34,13 @@ export function MilestoneTracker({
   onApprove: (index: number) => void;
   onReject: (index: number, reason: string) => void;
   onDispute: (index: number) => void;
+  onResolve: (index: number, resolution: "releaseToFreelancer" | "refundToClient" | "split") => void;
 }) {
+  const isSettled = (s: string) =>
+    s === "approved" || s === "resolvedRelease" || s === "resolvedRefund" || s === "resolvedSplit";
+
   const firstUnresolvedIndex = contract.milestones.findIndex(
-    (status) => milestoneStatusName(status) !== "approved"
+    (status) => !isSettled(milestoneStatusName(status))
   );
 
   return (
@@ -45,12 +51,16 @@ export function MilestoneTracker({
             ? contract.basePayout.add(contract.remainder)
             : contract.basePayout;
 
+        const rawProposal = contract.disputeResolutions?.[index];
+        const disputeProposal = rawProposal ? Object.keys(rawProposal as object)[0] : null;
+
         return (
           <MilestoneRow
             key={index}
             index={index}
             status={milestoneStatusName(status)}
             reason={contract.rejectionReasons[index]}
+            disputeProposal={disputeProposal}
             payoutSol={lamportsToSol(payout)}
             role={role}
             isPending={pendingIndex === index}
@@ -59,6 +69,7 @@ export function MilestoneTracker({
             onApprove={() => onApprove(index)}
             onReject={(reason) => onReject(index, reason)}
             onDispute={() => onDispute(index)}
+            onResolve={(res) => onResolve(index, res)}
           />
         );
       })}
@@ -70,6 +81,7 @@ function MilestoneRow({
   index,
   status,
   reason,
+  disputeProposal,
   payoutSol,
   role,
   isPending,
@@ -78,10 +90,12 @@ function MilestoneRow({
   onApprove,
   onReject,
   onDispute,
+  onResolve,
 }: {
   index: number;
   status: string;
   reason: string;
+  disputeProposal?: string | null;
   payoutSol: number;
   role: Role;
   isPending: boolean;
@@ -90,18 +104,23 @@ function MilestoneRow({
   onApprove: () => void;
   onReject: (reason: string) => void;
   onDispute: () => void;
+  onResolve: (resolution: "releaseToFreelancer" | "refundToClient" | "split") => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reasonDraft, setReasonDraft] = useState("");
 
   const isDisputed = status === "disputed";
-  const isApproved = status === "approved";
+  const isSettled =
+    status === "approved" ||
+    status === "resolvedRelease" ||
+    status === "resolvedRefund" ||
+    status === "resolvedSplit";
 
   return (
     <motion.li
       className="glass-card relative rounded-lg p-5"
       style={{
-        filter: isDisputed ? "saturate(0.35)" : undefined,
+        filter: isDisputed ? "saturate(0.55)" : undefined,
       }}
       animate={isPending ? { opacity: [1, 0.6, 1] } : { opacity: 1 }}
       transition={isPending ? { repeat: Infinity, duration: 1.1 } : undefined}
@@ -114,12 +133,12 @@ function MilestoneRow({
             </span>
             <StatusPill status={status} />
             {isDisputed && (
-              <span className="text-xs text-warning" title="Frozen — resolve off-chain">
-                🔒 frozen
+              <span className="text-xs text-warning" title="In dispute — can be resolved below">
+                ⚖️ disputed
               </span>
             )}
-            {!isCurrent && !isApproved && !isDisputed && (
-              <span className="text-xs text-alter-muted" title="Locked until the previous milestone is approved">
+            {!isCurrent && !isSettled && !isDisputed && (
+              <span className="text-xs text-alter-muted" title="Locked until the previous milestone is settled">
                 🔒 waiting on #{index}
               </span>
             )}
@@ -131,7 +150,7 @@ function MilestoneRow({
 
         <div className="text-right font-mono text-sm text-alter-primary">
           {payoutSol.toFixed(4)} SOL
-          {isApproved && (
+          {(status === "approved" || status === "resolvedRelease") && (
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -140,6 +159,12 @@ function MilestoneRow({
             >
               ✓ paid out
             </motion.div>
+          )}
+          {status === "resolvedRefund" && (
+            <div className="text-warning text-xs mt-1">↩ refunded to client</div>
+          )}
+          {status === "resolvedSplit" && (
+            <div className="text-accent text-xs mt-1">½ split 50/50</div>
           )}
         </div>
       </div>
@@ -158,6 +183,40 @@ function MilestoneRow({
         )}
       </AnimatePresence>
 
+      {/* Disputed Milestone Resolution Controls */}
+      {isDisputed && (
+        <div className="mt-4 rounded-md border border-border bg-elevated p-3">
+          <p className="text-xs font-medium text-alter-primary mb-2">Dispute Resolution:</p>
+          {disputeProposal && (
+            <p className="text-xs text-info mb-3">
+              Proposal on record: <span className="font-mono">{disputeProposal}</span>. When the other party confirms, funds release automatically.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {role === "client" && (
+              <>
+                <ActionButton onClick={() => onResolve("releaseToFreelancer")} disabled={isPending} primary>
+                  Release to Freelancer
+                </ActionButton>
+                <ActionButton onClick={() => onResolve("split")} disabled={isPending}>
+                  {disputeProposal === "split" ? "Accept 50/50 Split" : "Propose 50/50 Split"}
+                </ActionButton>
+              </>
+            )}
+            {role === "freelancer" && (
+              <>
+                <ActionButton onClick={() => onResolve("refundToClient")} disabled={isPending} primary>
+                  Refund to Client
+                </ActionButton>
+                <ActionButton onClick={() => onResolve("split")} disabled={isPending}>
+                  {disputeProposal === "split" ? "Accept 50/50 Split" : "Propose 50/50 Split"}
+                </ActionButton>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Freelancer actions */}
       {role === "freelancer" && isCurrent && (status === "notSubmitted" || status === "rejected") && (
         <div className="mt-4 flex gap-2">
@@ -166,7 +225,7 @@ function MilestoneRow({
           </ActionButton>
           {status === "rejected" && (
             <ActionButton onClick={onDispute} disabled={isPending}>
-              Raise dispute instead
+              Raise dispute
             </ActionButton>
           )}
         </div>
@@ -176,12 +235,15 @@ function MilestoneRow({
       {role === "client" && isCurrent && status === "submitted" && (
         <div className="mt-4">
           {!rejecting ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <ActionButton onClick={onApprove} disabled={isPending} primary>
                 Approve &amp; release {payoutSol.toFixed(4)} SOL
               </ActionButton>
               <ActionButton onClick={() => setRejecting(true)} disabled={isPending}>
                 Reject
+              </ActionButton>
+              <ActionButton onClick={onDispute} disabled={isPending}>
+                Raise dispute
               </ActionButton>
             </div>
           ) : (
@@ -229,14 +291,17 @@ function StatusPill({ status }: { status: string }) {
     approved: "var(--success)",
     rejected: "var(--warning)",
     disputed: "var(--error)",
+    resolvedRelease: "var(--success)",
+    resolvedRefund: "var(--warning)",
+    resolvedSplit: "var(--accent)",
   };
   return (
     <motion.span
       className="rounded-full px-2 py-0.5 text-xs font-medium"
       style={{
-        color: color[status],
-        background: `color-mix(in srgb, ${color[status]}, transparent 85%)`,
-        border: `1px solid ${color[status]}`,
+        color: color[status] ?? "var(--alter-muted)",
+        background: `color-mix(in srgb, ${color[status] ?? "var(--alter-muted)"}, transparent 85%)`,
+        border: `1px solid ${color[status] ?? "var(--alter-muted)"}`,
       }}
     >
       {status === "submitted" && (

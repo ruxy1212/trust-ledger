@@ -30,4 +30,10 @@ pub enum CapstoneError {
     EscrowTooSmall,
     #[msg("Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS")]
     MilestonePayoutTooSmall,
+    #[msg("Milestone must be in Submitted or Rejected state to raise a dispute")]
+    MilestoneNotDisputable,
+    #[msg("Milestone must be in Disputed state to be resolved")]
+    MilestoneNotDisputed,
+    #[msg("Dispute resolution requires matching agreement or unilateral concession")]
+    DisputeResolutionMismatch,
 }

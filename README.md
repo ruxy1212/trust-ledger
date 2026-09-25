@@ -33,7 +33,8 @@ trust-ledger/
 - `approve_milestone` — client approves and releases payout for that milestone; updates the freelancer's `ReputationRecord`
 - `reject_milestone` — client rejects with a reason (max 200 chars); milestone can be resubmitted
 - `raise_dispute` — either party can freeze a milestone in a `Disputed` state pending resolution
-- Milestones must be approved in order (a milestone can't be submitted until the previous one is approved)
+- `resolve_dispute` — bilateral or unilateral resolution: client can release funds to freelancer, freelancer can refund to client, or both can mutually agree to split funds 50/50
+- Milestones must be settled in order (a milestone can't be submitted until the previous one is settled or approved)
 - Full happy-path and error-path test coverage; a non-transferable verification badge (`badge.rs`) is scaffolded for completed freelancers using Token-2022
 
 **Frontend (`/app`)** — Next.js app, in progress:
@@ -45,10 +46,10 @@ trust-ledger/
 ## To-do / roadmap
 
 - [ ] Finish client and freelancer dashboard UI (motion/react + Tailwind)
-- [ ] Wire up the full contract lifecycle in the frontend: create → submit → approve/reject → dispute
+- [ ] Wire up the full contract lifecycle in the frontend: create → submit → approve/reject → dispute → resolve
 - [ ] Decide and implement the reputation-lookup agent's access model (open chatbot vs. restricted to registered clients/freelancers)
 - [ ] Wire the non-transferable badge mint into the approval flow end-to-end
-- [ ] Basic dispute-resolution path (currently a contract can be frozen in `Disputed`, but there's no resolution instruction yet)
+- [x] Basic dispute-resolution path (unilateral release/refund, or mutual split agreement)
 - [ ] Mainnet deployment plan
 - [ ] Public reputation lookup — let any platform or client query a wallet's `ReputationRecord`
 

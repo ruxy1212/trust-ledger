@@ -24,7 +24,10 @@ export type MilestoneStatusName =
   | "submitted"
   | "approved"
   | "rejected"
-  | "disputed";
+  | "disputed"
+  | "resolvedRelease"
+  | "resolvedRefund"
+  | "resolvedSplit";
 
 /**
  * Anchor decodes a Rust enum variant as `{ variantName: {} }`.
@@ -39,5 +42,8 @@ export const STATUS_LABEL: Record<MilestoneStatusName, string> = {
   submitted: "Submitted — awaiting review",
   approved: "Approved — paid out",
   rejected: "Rejected",
-  disputed: "Disputed — frozen",
+  disputed: "Disputed",
+  resolvedRelease: "Resolved — released to freelancer",
+  resolvedRefund: "Resolved — refunded to client",
+  resolvedSplit: "Resolved — split 50/50",
 };
