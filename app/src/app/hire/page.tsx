@@ -48,7 +48,7 @@ export default function HirePage() {
   const amount = Number(amountSol);
   const isSelf = !!publicKey && !!freelancerPubkey && publicKey.equals(freelancerPubkey);
   const isAmountTooLow = amount < 0.01;
-  const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < 0.001;
+  const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < 0.002;
 
   const canSubmit =
     status !== "submitting" &&
@@ -213,7 +213,7 @@ export default function HirePage() {
         </label>
         {isMilestonePayoutTooLow && !isAmountTooLow && (
           <p className="text-xs text-error">
-            Each milestone payout must be at least 0.001 SOL.
+            Each milestone payout must be at least 0.002 SOL.
           </p>
         )}
 

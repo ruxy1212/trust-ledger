@@ -39,7 +39,6 @@ export default function ProfilePage({
   useEffect(() => {
     if (!walletPubkey) {
       setNotFound(true);
-      router.replace('/profile/create')
       return;
     }
     const w = walletPubkey;
@@ -60,10 +59,31 @@ export default function ProfilePage({
       // approved milestone — its mere existence on chain IS "has a badge."
       setHasBadge(badgeMintInfo !== null);
     })();
-  }, [router, program, connection, walletPubkey]);
+  }, [program, connection, walletPubkey]);
 
   if (!walletPubkey || notFound) {
-    return <p className="text-error text-center mt-50">{"That's not a valid wallet address."}</p>;
+    return (
+      <div className="mx-auto max-w-md text-center py-20">
+        <h2 className="font-display text-xl font-bold text-alter-primary">Invalid Wallet Address</h2>
+        <p className="mt-2 text-sm text-alter-secondary">
+          The requested address is not a valid Solana public key.
+        </p>
+        <div className="mt-6 flex justify-center gap-4">
+          <Link
+            href="/dashboard"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/profile/create"
+            className="glass-card rounded-md px-4 py-2 text-sm font-medium text-alter-primary"
+          >
+            Create Profile
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -91,8 +111,8 @@ export default function ProfilePage({
 
       {!displayName && (
         <p className="mt-4 text-sm text-alter-secondary">
-          This wallet is yet to be create a public profile, but the counts above are
-          read directly from chain and are accurate regardless.
+          This wallet has not created a public profile yet, but the reputation counts above are
+          read directly from on-chain data and are accurate.
         </p>
       )}
       <div className="flex flex-wrap items-center justify-center py-8 gap-4">

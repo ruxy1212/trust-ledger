@@ -13,7 +13,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@/lib/pda";
-import { lamportsToSol, shortAddress } from "@/lib/format";
+import { lamportsToSol, shortAddress, isMilestoneSettled } from "@/lib/format";
 import { MilestoneTracker, Role, ContractView } from "@/components/MilestoneTracker";
 import { contracts } from "@/types/accounts";
 import BN from "bn.js";
@@ -63,11 +63,33 @@ export default function ContractPage({
     reload();
   }, [reload]);
 
-  if (!contractPda) {
-    return <p className="text-error text-center mt-50">{"That's not a valid contract address."}</p>;
-  }
-  if (loadError) {
-    return <p className="text-error text-center mt-50">{loadError}</p>;
+  if (!contractPda || loadError) {
+    return (
+      <div className="mx-auto max-w-md text-center py-20">
+        <h2 className="font-display text-xl font-bold text-alter-primary">
+          {!contractPda ? "Invalid Contract Address" : "Contract Not Found"}
+        </h2>
+        <p className="mt-2 text-sm text-alter-secondary">
+          {!contractPda
+            ? "The provided address is not a valid Solana public key."
+            : loadError}
+        </p>
+        <div className="mt-6 flex justify-center gap-4">
+          <Link
+            href="/dashboard"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+          >
+            Go to Dashboard
+          </Link>
+          <Link
+            href="/hire"
+            className="glass-card rounded-md px-4 py-2 text-sm font-medium text-alter-primary"
+          >
+            Create Contract
+          </Link>
+        </div>
+      </div>
+    );
   }
   if (!contract) {
     return <p className="text-alter-muted text-center mt-50">Loading contract…</p>;
@@ -81,10 +103,7 @@ export default function ContractPage({
     ? "freelancer"
     : "viewer";
 
-  const completed = contract.milestones.filter((m) => {
-    const k = Object.keys(m as object)[0];
-    return k === "approved" || k === "resolvedRelease" || k === "resolvedRefund" || k === "resolvedSplit";
-  }).length;
+  const completed = contract.milestones.filter(isMilestoneSettled).length;
 
   async function runAction(index: number, action: () => Promise<void>) {
     setPendingIndex(index);

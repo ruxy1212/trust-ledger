@@ -47,3 +47,14 @@ export const STATUS_LABEL: Record<MilestoneStatusName, string> = {
   resolvedRefund: "Resolved — refunded to client",
   resolvedSplit: "Resolved — split 50/50",
 };
+
+export function isMilestoneSettled(status: unknown): boolean {
+  const name = milestoneStatusName(status);
+  return (
+    name === "approved" ||
+    name === "resolvedRelease" ||
+    name === "resolvedRefund" ||
+    name === "resolvedSplit"
+  );
+}
+

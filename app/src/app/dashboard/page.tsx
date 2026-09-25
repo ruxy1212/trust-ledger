@@ -7,7 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useReadOnlyProgram } from "@/lib/anchor-client";
 import { fetchContractsAsClient, fetchContractsAsFreelancer } from "@/lib/fetch-contracts";
-import { lamportsToSol, milestoneStatusName, shortAddress } from "@/lib/format";
+import { lamportsToSol, shortAddress, isMilestoneSettled } from "@/lib/format";
 
 type ContractEntry = { publicKey: PublicKey; account: any };
 
@@ -71,9 +71,7 @@ function ContractList({ items }: { items: ContractEntry[] }) {
   return (
     <ul className="flex flex-col gap-3">
       {items.map(({ publicKey, account }) => {
-        const completed = account.milestones.filter(
-          (m: unknown) => milestoneStatusName(m) === "approved"
-        ).length;
+        const completed = account.milestones.filter(isMilestoneSettled).length;
 
         return (
           <li key={publicKey.toBase58()}>

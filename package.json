@@ -1,9 +1,11 @@
 {
-  "name": "counter",
+  "name": "trust-ledger",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
-  "main": "index.js",
-  "license": "MIT",
+  "scripts": {
+    "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/trust-ledger.ts"
+  },
   "devDependencies": {
     "@codama/renderers-js": "^2.3.0",
     "@solana/spl-token": "^0.4.14",
