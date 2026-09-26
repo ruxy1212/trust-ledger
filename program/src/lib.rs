@@ -56,4 +56,17 @@ pub mod trust_ledger {
     ) -> Result<()> {
         resolve_dispute::handler(ctx, index, resolution)
     }
+
+    pub fn initialize_config(ctx: Context<InitializeConfig>, fee_basis_points: u16) -> Result<()> {
+        initialize_config::handler(ctx, fee_basis_points)
+    }
+
+    pub fn update_config(
+        ctx: Context<UpdateConfig>,
+        new_fee_basis_points: Option<u16>,
+        new_admin: Option<Pubkey>,
+    ) -> Result<()> {
+        update_config::handler(ctx, new_fee_basis_points, new_admin)
+    }
 }
+

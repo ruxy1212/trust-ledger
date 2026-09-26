@@ -95,3 +95,19 @@ export function freelancerProfiles(program: AnyProgram): FreelancerProfileClient
 export function reputationRecords(program: AnyProgram): ReputationRecordClient {
   return (program.account as any).reputationRecord;
 }
+
+export interface ProtocolConfigAccount {
+  admin: PublicKey;
+  feeRecipient: PublicKey;
+  feeBasisPoints: number;
+  bump: number;
+}
+
+interface ProtocolConfigClient {
+  fetch(address: PublicKey | string): Promise<ProtocolConfigAccount>;
+  fetchNullable(address: PublicKey | string): Promise<ProtocolConfigAccount | null>;
+}
+
+export function protocolConfigs(program: AnyProgram): ProtocolConfigClient {
+  return (program.account as any).protocolConfig;
+}

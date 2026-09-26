@@ -95,3 +95,10 @@ export function generateContractId(): BN {
   crypto.getRandomValues(bytes);
   return new BN(bytes, "le");
 }
+
+/** [b"config"] — the singleton protocol config PDA */
+export function deriveConfigPda(programId: PublicKey = PROGRAM_ID): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync([enc("config")], programId);
+  return pda;
+}
+

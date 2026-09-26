@@ -36,4 +36,11 @@ pub enum CapstoneError {
     MilestoneNotDisputed,
     #[msg("Dispute resolution requires matching agreement or unilateral concession")]
     DisputeResolutionMismatch,
+    #[msg("Fee basis points exceed maximum allowed (max 1000 bps = 10%)")]
+    FeeTooHigh,
+    #[msg("Invalid protocol fee recipient account")]
+    InvalidFeeRecipient,
+    #[msg("Fee recipient must be provided when fee basis points > 0")]
+    FeeRecipientRequired,
 }
+

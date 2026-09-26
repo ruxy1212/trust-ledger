@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 use crate::badge::mint_badge;
-use crate::state::{Contract, MilestoneStatus, DisputeResolution, ReputationRecord};
+use crate::state::{Contract, MilestoneStatus, DisputeResolution, ReputationRecord, ProtocolConfig};
 use crate::constants::{VAULT_SEED, REPUTATION_SEED, BADGE_SEED};
 use crate::errors::CapstoneError;
 
@@ -68,6 +68,13 @@ pub struct ResolveDispute<'info> {
     pub associated_token_program: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
+
+    /// Optional protocol fee configuration account
+    pub config: Option<Account<'info, ProtocolConfig>>,
+
+    /// CHECK: Optional protocol fee recipient account
+    #[account(mut)]
+    pub fee_recipient: Option<UncheckedAccount<'info>>,
 }
 
 pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResolution) -> Result<()> {
@@ -121,6 +128,20 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
 
     match resolution {
         DisputeResolution::ReleaseToFreelancer => {
+            let (freelancer_payout, fee_payout) = if let Some(config) = &ctx.accounts.config {
+                if config.fee_basis_points > 0 {
+                    let fee = payout.saturating_mul(config.fee_basis_points as u64) / 10_000;
+                    let recipient = ctx.accounts.fee_recipient.as_ref()
+                        .ok_or(CapstoneError::FeeRecipientRequired)?;
+                    require_keys_eq!(recipient.key(), config.fee_recipient, CapstoneError::InvalidFeeRecipient);
+                    (payout.saturating_sub(fee), fee)
+                } else {
+                    (payout, 0)
+                }
+            } else {
+                (payout, 0)
+            };
+
             let cpi_ctx = CpiContext::new(
                 ctx.accounts.system_program.key(),
                 Transfer {
@@ -128,7 +149,19 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
                     to: ctx.accounts.freelancer.to_account_info(),
                 },
             ).with_signer(vault_signer_seeds);
-            transfer(cpi_ctx, payout)?;
+            transfer(cpi_ctx, freelancer_payout)?;
+
+            if fee_payout > 0 {
+                let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
+                let fee_cpi = CpiContext::new(
+                    ctx.accounts.system_program.key(),
+                    Transfer {
+                        from: ctx.accounts.vault.to_account_info(),
+                        to: recipient.to_account_info(),
+                    },
+                ).with_signer(vault_signer_seeds);
+                transfer(fee_cpi, fee_payout)?;
+            }
 
             contract.milestones[index as usize] = MilestoneStatus::ResolvedRelease;
             contract.dispute_resolutions[index as usize] = None;
@@ -170,8 +203,22 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
         DisputeResolution::Split => {
             let half = payout / 2;
             let remainder = payout % 2;
-            let freelancer_share = half;
+            let raw_freelancer_share = half;
             let client_share = half + remainder;
+
+            let (freelancer_share, fee_payout) = if let Some(config) = &ctx.accounts.config {
+                if config.fee_basis_points > 0 {
+                    let fee = raw_freelancer_share.saturating_mul(config.fee_basis_points as u64) / 10_000;
+                    let recipient = ctx.accounts.fee_recipient.as_ref()
+                        .ok_or(CapstoneError::FeeRecipientRequired)?;
+                    require_keys_eq!(recipient.key(), config.fee_recipient, CapstoneError::InvalidFeeRecipient);
+                    (raw_freelancer_share.saturating_sub(fee), fee)
+                } else {
+                    (raw_freelancer_share, 0)
+                }
+            } else {
+                (raw_freelancer_share, 0)
+            };
 
             if freelancer_share > 0 {
                 let cpi_freelancer = CpiContext::new(
@@ -182,6 +229,18 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
                     },
                 ).with_signer(vault_signer_seeds);
                 transfer(cpi_freelancer, freelancer_share)?;
+            }
+
+            if fee_payout > 0 {
+                let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
+                let fee_cpi = CpiContext::new(
+                    ctx.accounts.system_program.key(),
+                    Transfer {
+                        from: ctx.accounts.vault.to_account_info(),
+                        to: recipient.to_account_info(),
+                    },
+                ).with_signer(vault_signer_seeds);
+                transfer(fee_cpi, fee_payout)?;
             }
 
             if client_share > 0 {
@@ -201,8 +260,8 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
             let is_first_completion = ctx.accounts.reputation.completed_count == 0;
             let reputation = &mut ctx.accounts.reputation;
             reputation.completed_count += 1;
-            reputation.earned_volume = reputation.earned_volume.saturating_add(freelancer_share);
-            let volume_bonus = freelancer_share / 100_000;
+            reputation.earned_volume = reputation.earned_volume.saturating_add(raw_freelancer_share);
+            let volume_bonus = raw_freelancer_share / 100_000;
             reputation.reputation_score = reputation.reputation_score.saturating_add(50 + volume_bonus);
 
             if is_first_completion {

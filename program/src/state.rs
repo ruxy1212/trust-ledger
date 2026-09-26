@@ -52,3 +52,13 @@ pub struct Contract {
     #[max_len(10)]
     pub dispute_resolutions: Vec<Option<DisputeResolution>>,
 }
+
+#[account]
+#[derive(InitSpace)]
+pub struct ProtocolConfig {
+    pub admin: Pubkey,
+    pub fee_recipient: Pubkey,
+    pub fee_basis_points: u16,
+    pub bump: u8,
+}
+

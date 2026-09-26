@@ -11,6 +11,7 @@ import {
   deriveReputationPda,
   deriveBadgeMintPda,
   deriveBadgeTokenAccount,
+  deriveConfigPda,
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "../lib/pda";
@@ -18,6 +19,7 @@ import {
   contracts,
   freelancerProfiles,
   reputationRecords,
+  protocolConfigs,
 } from "../types/accounts";
 
 describe("trust-ledger frontend integration", () => {
@@ -851,5 +853,231 @@ describe("trust-ledger frontend integration", () => {
 
     contractAcc = await contracts(program).fetch(contract5);
     assert.deepEqual(contractAcc.milestones[0], { resolvedSplit: {} });
+  });
+
+  const configPda = deriveConfigPda();
+  const feeRecipient = Keypair.generate();
+
+  it("22. admin initializes protocol config with 250 bps fee (2.5%)", async () => {
+    await fundWallet(feeRecipient.publicKey, 1);
+
+    await program.methods
+      .initializeConfig(250)
+      .accounts({
+        config: configPda,
+        admin: client.publicKey,
+        feeRecipient: feeRecipient.publicKey,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    const configAcc = await protocolConfigs(program).fetch(configPda);
+    assert.equal(configAcc.admin.toBase58(), client.publicKey.toBase58());
+    assert.equal(configAcc.feeRecipient.toBase58(), feeRecipient.publicKey.toBase58());
+    assert.equal(configAcc.feeBasisPoints, 250);
+  });
+
+  it("23. rejects protocol config fee above MAX_FEE_BASIS_POINTS (1000 bps = 10%)", async () => {
+    try {
+      await program.methods
+        .updateConfig(1500, null)
+        .accounts({
+          config: configPda,
+          admin: client.publicKey,
+        } as any)
+        .rpc();
+      assert.fail("Fee above max 1000 bps should have failed");
+    } catch (err: any) {
+      assert.include(err.toString(), "FeeTooHigh");
+    }
+  });
+
+  it("24. milestone approval splits fee to protocol fee recipient", async () => {
+    const contractId6 = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: contract6, vaultPda: vault6 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId6
+    );
+
+    const CONTRACT_AMOUNT = new BN(100_000_000); // 0.1 SOL
+
+    await program.methods
+      .createContract(contractId6, CONTRACT_AMOUNT, 1)
+      .accounts({
+        contract: contract6,
+        vault: vault6,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    await program.methods
+      .submitMilestone(0)
+      .accounts({
+        contract: contract6,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    const recipientPreBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPreBal = await provider.connection.getBalance(freelancer.publicKey);
+
+    await program.methods
+      .approveMilestone(0)
+      .accounts({
+        contract: contract6,
+        vault: vault6,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint,
+        badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        config: configPda,
+        feeRecipient: feeRecipient.publicKey,
+      } as any)
+      .rpc();
+
+    const recipientPostBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPostBal = await provider.connection.getBalance(freelancer.publicKey);
+
+    // 250 bps = 2.5% of 100_000_000 = 2_500_000 lamports
+    const expectedFee = 2_500_000;
+    const expectedFreelancerPayout = 100_000_000 - expectedFee;
+
+    assert.equal(recipientPostBal - recipientPreBal, expectedFee);
+    assert.equal(freelancerPostBal - freelancerPreBal, expectedFreelancerPayout);
+
+    const contractAcc = await contracts(program).fetch(contract6);
+    assert.deepEqual(contractAcc.milestones[0], { approved: {} });
+  });
+
+  it("25. dispute split resolution splits protocol fee from freelancer share", async () => {
+    const contractId7 = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: contract7, vaultPda: vault7 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId7
+    );
+
+    const CONTRACT_AMOUNT = new BN(40_000_000); // 0.04 SOL
+
+    await program.methods
+      .createContract(contractId7, CONTRACT_AMOUNT, 1)
+      .accounts({
+        contract: contract7,
+        vault: vault7,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    await program.methods
+      .submitMilestone(0)
+      .accounts({
+        contract: contract7,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    await program.methods
+      .raiseDispute(0)
+      .accounts({
+        contract: contract7,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    const recipientPreBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPreBal = await provider.connection.getBalance(freelancer.publicKey);
+    const clientPreBal = await provider.connection.getBalance(client.publicKey);
+
+    await program.methods
+      .resolveDispute(0, { split: {} })
+      .accounts({
+        contract: contract7,
+        vault: vault7,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint,
+        badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        config: configPda,
+        feeRecipient: feeRecipient.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    await program.methods
+      .resolveDispute(0, { split: {} })
+      .accounts({
+        contract: contract7,
+        vault: vault7,
+        caller: client.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint,
+        badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        config: configPda,
+        feeRecipient: feeRecipient.publicKey,
+      } as any)
+      .rpc();
+
+    const recipientPostBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPostBal = await provider.connection.getBalance(freelancer.publicKey);
+    const clientPostBal = await provider.connection.getBalance(client.publicKey);
+
+    const expectedFee = 500_000;
+    const expectedFreelancerPayout = 19_500_000;
+
+    assert.equal(recipientPostBal - recipientPreBal, expectedFee);
+    assert.equal(freelancerPostBal - freelancerPreBal, expectedFreelancerPayout);
+    assert.approximately(clientPostBal - clientPreBal, 20_000_000, 100_000);
+
+    const contractAcc = await contracts(program).fetch(contract7);
+    assert.deepEqual(contractAcc.milestones[0], { resolvedSplit: {} });
+  });
+
+  it("26. admin updates protocol config and non-admin cannot update", async () => {
+    try {
+      await program.methods
+        .updateConfig(100, null)
+        .accounts({
+          config: configPda,
+          admin: stranger.publicKey,
+        } as any)
+        .signers([stranger])
+        .rpc();
+      assert.fail("Non-admin stranger should have failed");
+    } catch (err: any) {
+      assert.include(err.toString(), "Unauthorized");
+    }
+
+    await program.methods
+      .updateConfig(100, null)
+      .accounts({
+        config: configPda,
+        admin: client.publicKey,
+      } as any)
+      .rpc();
+
+    const updatedConfig = await protocolConfigs(program).fetch(configPda);
+    assert.equal(updatedConfig.feeBasisPoints, 100);
   });
 });

@@ -9,813 +9,9 @@ import {
   getAccount,
   createTransferCheckedInstruction,
 } from "@solana/spl-token";
-// import { TrustLedger } from "../target/types/trust_ledger";
-type TrustLedger = {
-  "address": "E68AQePth8MVtn2aHax23c6BWye8Mnw2fkDzCyTfqNEk",
-  "metadata": {
-    "name": "trustLedger",
-    "version": "0.1.0",
-    "spec": "0.1.0",
-    "description": "Created with Anchor"
-  },
-  "instructions": [
-    {
-      "name": "approveMilestone",
-      "discriminator": [
-        145,
-        85,
-        92,
-        60,
-        50,
-        130,
-        219,
-        106
-      ],
-      "accounts": [
-        {
-          "name": "contract",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "contract"
-              }
-            ]
-          }
-        },
-        {
-          "name": "client",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "contract"
-          ]
-        },
-        {
-          "name": "freelancer",
-          "docs": [
-            "Identity is enforced by the `has_one = freelancer` constraint above."
-          ],
-          "writable": true,
-          "relations": [
-            "contract"
-          ]
-        },
-        {
-          "name": "reputation",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  114,
-                  101,
-                  112,
-                  117,
-                  116,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "freelancer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "createContract",
-      "discriminator": [
-        244,
-        48,
-        244,
-        178,
-        216,
-        88,
-        122,
-        52
-      ],
-      "accounts": [
-        {
-          "name": "contract",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  116,
-                  114,
-                  97,
-                  99,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "client"
-              },
-              {
-                "kind": "account",
-                "path": "freelancer"
-              },
-              {
-                "kind": "arg",
-                "path": "contractId"
-              }
-            ]
-          }
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "contract"
-              }
-            ]
-          }
-        },
-        {
-          "name": "client",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "freelancer"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "contractId",
-          "type": "u64"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "milestoneCount",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "createProfile",
-      "discriminator": [
-        225,
-        205,
-        234,
-        143,
-        17,
-        186,
-        50,
-        220
-      ],
-      "accounts": [
-        {
-          "name": "profile",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  112,
-                  114,
-                  111,
-                  102,
-                  105,
-                  108,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "freelancer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "freelancer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "displayName",
-          "type": "string"
-        }
-      ]
-    },
-    {
-      "name": "raiseDispute",
-      "discriminator": [
-        41,
-        243,
-        1,
-        51,
-        150,
-        95,
-        246,
-        73
-      ],
-      "accounts": [
-        {
-          "name": "contract",
-          "writable": true
-        },
-        {
-          "name": "caller",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "client"
-        },
-        {
-          "name": "freelancer",
-          "writable": true
-        },
-        {
-          "name": "reputation",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  114,
-                  101,
-                  112,
-                  117,
-                  116,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "freelancer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "resolveDispute",
-      "discriminator": [
-        231,
-        6,
-        202,
-        6,
-        96,
-        103,
-        12,
-        230
-      ],
-      "accounts": [
-        {
-          "name": "contract",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "contract"
-              }
-            ]
-          }
-        },
-        {
-          "name": "caller",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "client",
-          "writable": true
-        },
-        {
-          "name": "freelancer",
-          "writable": true
-        },
-        {
-          "name": "reputation",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  114,
-                  101,
-                  112,
-                  117,
-                  116,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "freelancer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "badgeMint",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  97,
-                  100,
-                  103,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "freelancer"
-              }
-            ]
-          }
-        },
-        {
-          "name": "badgeTokenAccount",
-          "writable": true
-        },
-        {
-          "name": "tokenProgram",
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        },
-        {
-          "name": "associatedTokenProgram",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u8"
-        },
-        {
-          "name": "resolution",
-          "type": {
-            "defined": {
-              "name": "disputeResolution"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "rejectMilestone",
-      "discriminator": [
-        243,
-        48,
-        66,
-        165,
-        237,
-        41,
-        116,
-        249
-      ],
-      "accounts": [
-        {
-          "name": "contract",
-          "writable": true
-        },
-        {
-          "name": "client",
-          "signer": true,
-          "relations": [
-            "contract"
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u8"
-        },
-        {
-          "name": "reason",
-          "type": "string"
-        }
-      ]
-    },
-    {
-      "name": "submitMilestone",
-      "discriminator": [
-        35,
-        96,
-        220,
-        215,
-        102,
-        83,
-        139,
-        52
-      ],
-      "accounts": [
-        {
-          "name": "contract",
-          "writable": true
-        },
-        {
-          "name": "freelancer",
-          "signer": true,
-          "relations": [
-            "contract"
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "index",
-          "type": "u8"
-        }
-      ]
-    }
-  ],
-  "accounts": [
-    {
-      "name": "contract",
-      "discriminator": [
-        172,
-        138,
-        115,
-        242,
-        121,
-        67,
-        183,
-        26
-      ]
-    },
-    {
-      "name": "freelancerProfile",
-      "discriminator": [
-        142,
-        199,
-        151,
-        44,
-        211,
-        185,
-        36,
-        26
-      ]
-    },
-    {
-      "name": "reputationRecord",
-      "discriminator": [
-        140,
-        29,
-        118,
-        100,
-        134,
-        207,
-        99,
-        194
-      ]
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "unauthorized",
-      "msg": "Wrong wallet signs an instruction that requires client or freelancer"
-    },
-    {
-      "code": 6001,
-      "name": "milestoneOutOfRange",
-      "msg": "Milestone index doesn't exist on this contract"
-    },
-    {
-      "code": 6002,
-      "name": "milestoneNotSubmitted",
-      "msg": "Milestone is not in the Submitted state"
-    },
-    {
-      "code": 6003,
-      "name": "notYetRejected",
-      "msg": "Milestone is not in the Rejected state"
-    },
-    {
-      "code": 6004,
-      "name": "milestoneDisputed",
-      "msg": "Milestone is frozen in a Disputed state"
-    },
-    {
-      "code": 6005,
-      "name": "invalidMilestoneCount",
-      "msg": "Milestone count must be greater than zero"
-    },
-    {
-      "code": 6006,
-      "name": "nameTooLong",
-      "msg": "Freelancer display name is too long (max 50 chars)"
-    },
-    {
-      "code": 6007,
-      "name": "reasonTooLong",
-      "msg": "Rejection reason is too long (max 200 chars)"
-    },
-    {
-      "code": 6008,
-      "name": "previousMilestoneNotApproved",
-      "msg": "The previous milestone must be approved before this one can be submitted"
-    },
-    {
-      "code": 6009,
-      "name": "invalidBadgeTokenAccount",
-      "msg": "badge_token_account is not the freelancer's associated token account for badge_mint"
-    },
-    {
-      "code": 6010,
-      "name": "badgeSetupFailed",
-      "msg": "Failed to construct a Token-2022 badge instruction"
-    },
-    {
-      "code": 6011,
-      "name": "selfContractNotAllowed",
-      "msg": "A client cannot create a contract with themselves as the freelancer"
-    },
-    {
-      "code": 6012,
-      "name": "escrowTooSmall",
-      "msg": "Contract amount must be at least MIN_ESCROW_LAMPORTS"
-    },
-    {
-      "code": 6013,
-      "name": "milestonePayoutTooSmall",
-      "msg": "Base milestone payout must be at least MIN_MILESTONE_PAYOUT_LAMPORTS"
-    },
-    {
-      "code": 6014,
-      "name": "milestoneNotDisputable",
-      "msg": "Milestone must be in Submitted or Rejected state to raise a dispute"
-    },
-    {
-      "code": 6015,
-      "name": "milestoneNotDisputed",
-      "msg": "Milestone must be in Disputed state to be resolved"
-    },
-    {
-      "code": 6016,
-      "name": "disputeResolutionMismatch",
-      "msg": "Dispute resolution requires matching agreement or unilateral concession"
-    }
-  ],
-  "types": [
-    {
-      "name": "contract",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "client",
-            "type": "pubkey"
-          },
-          {
-            "name": "freelancer",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "milestoneCount",
-            "type": "u8"
-          },
-          {
-            "name": "basePayout",
-            "type": "u64"
-          },
-          {
-            "name": "remainder",
-            "type": "u64"
-          },
-          {
-            "name": "milestones",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "milestoneStatus"
-                }
-              }
-            }
-          },
-          {
-            "name": "rejectionReasons",
-            "type": {
-              "vec": "string"
-            }
-          },
-          {
-            "name": "disputeResolutions",
-            "type": {
-              "vec": {
-                "option": {
-                  "defined": {
-                    "name": "disputeResolution"
-                  }
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "freelancerProfile",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "freelancer",
-            "type": "pubkey"
-          },
-          {
-            "name": "displayName",
-            "type": "string"
-          }
-        ]
-      }
-    },
-    {
-      "name": "milestoneStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "notSubmitted"
-          },
-          {
-            "name": "submitted"
-          },
-          {
-            "name": "approved"
-          },
-          {
-            "name": "rejected"
-          },
-          {
-            "name": "disputed"
-          },
-          {
-            "name": "resolvedRelease"
-          },
-          {
-            "name": "resolvedRefund"
-          },
-          {
-            "name": "resolvedSplit"
-          }
-        ]
-      }
-    },
-    {
-      "name": "disputeResolution",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "releaseToFreelancer"
-          },
-          {
-            "name": "refundToClient"
-          },
-          {
-            "name": "split"
-          }
-        ]
-      }
-    },
-    {
-      "name": "reputationRecord",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "completedCount",
-            "type": "u32"
-          },
-          {
-            "name": "disputedCount",
-            "type": "u32"
-          },
-          {
-            "name": "earnedVolume",
-            "type": "u64"
-          },
-          {
-            "name": "reputationScore",
-            "type": "u64"
-          }
-        ]
-      }
-    }
-  ]
-};
+import idlJson from "../idls/trust_ledger.json";
 
+type TrustLedger = typeof idlJson;
 const { BN } = anchor.default;
 
 describe("trust-ledger", () => {
@@ -1742,5 +938,268 @@ describe("trust-ledger", () => {
 
     contractAcc = await program.account.contract.fetch(contract5);
     assert.deepEqual(contractAcc.milestones[0], { resolvedSplit: {} });
+  });
+
+  // ── Step 5: Protocol Fee & Monetization Tests ──────────────────────────────
+  const [configPda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("config")],
+    program.programId
+  );
+  const feeRecipient = anchor.web3.Keypair.generate();
+
+  // ── Test 22 ─────────────────────────────────────────────────────────────────
+  it("22. admin initializes protocol config with 250 bps fee (2.5%)", async () => {
+    await fundWallet(feeRecipient.publicKey, 1);
+
+    await program.methods
+      .initializeConfig(250)
+      .accounts({
+        config: configPda,
+        admin: client.publicKey,
+        feeRecipient: feeRecipient.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    const configAcc = await program.account.protocolConfig.fetch(configPda);
+    assert.equal(configAcc.admin.toBase58(), client.publicKey.toBase58());
+    assert.equal(configAcc.feeRecipient.toBase58(), feeRecipient.publicKey.toBase58());
+    assert.equal(configAcc.feeBasisPoints, 250);
+  });
+
+  // ── Test 23 ─────────────────────────────────────────────────────────────────
+  it("23. rejects protocol config fee above MAX_FEE_BASIS_POINTS (1000 bps = 10%)", async () => {
+    try {
+      await program.methods
+        .updateConfig(1500, null)
+        .accounts({
+          config: configPda,
+          admin: client.publicKey,
+        } as any)
+        .rpc();
+      assert.fail("Fee above max 1000 bps should have failed");
+    } catch (err: any) {
+      assert.include(err.toString(), "FeeTooHigh");
+    }
+  });
+
+  // ── Test 24 ─────────────────────────────────────────────────────────────────
+  it("24. milestone approval splits fee to protocol fee recipient", async () => {
+    const contractId6 = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: contract6, vaultPda: vault6 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId6
+    );
+
+    const CONTRACT_AMOUNT = new BN(100_000_000); // 0.1 SOL
+
+    await program.methods
+      .createContract(contractId6, CONTRACT_AMOUNT, 1)
+      .accounts({
+        contract: contract6,
+        vault: vault6,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    await program.methods
+      .submitMilestone(0)
+      .accounts({
+        contract: contract6,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    const recipientPreBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPreBal = await provider.connection.getBalance(freelancer.publicKey);
+
+    // Approve milestone with protocol config and fee recipient
+    await program.methods
+      .approveMilestone(0)
+      .accounts({
+        contract: contract6,
+        vault: vault6,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint,
+        badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        config: configPda,
+        feeRecipient: feeRecipient.publicKey,
+      } as any)
+      .rpc();
+
+    const recipientPostBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPostBal = await provider.connection.getBalance(freelancer.publicKey);
+
+    // 250 bps = 2.5% of 100_000_000 = 2_500_000 lamports
+    const expectedFee = 2_500_000;
+    const expectedFreelancerPayout = 100_000_000 - expectedFee; // 97_500_000 lamports
+
+    assert.equal(
+      recipientPostBal - recipientPreBal,
+      expectedFee,
+      "Fee recipient must receive exactly 2.5% protocol fee"
+    );
+    assert.equal(
+      freelancerPostBal - freelancerPreBal,
+      expectedFreelancerPayout,
+      "Freelancer must receive 97.5% net payout"
+    );
+
+    const contractAcc = await program.account.contract.fetch(contract6);
+    assert.deepEqual(contractAcc.milestones[0], { approved: {} });
+  });
+
+  // ── Test 25 ─────────────────────────────────────────────────────────────────
+  it("25. dispute split resolution splits protocol fee from freelancer share", async () => {
+    const contractId7 = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: contract7, vaultPda: vault7 } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, contractId7
+    );
+
+    const CONTRACT_AMOUNT = new BN(40_000_000); // 0.04 SOL
+
+    await program.methods
+      .createContract(contractId7, CONTRACT_AMOUNT, 1)
+      .accounts({
+        contract: contract7,
+        vault: vault7,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    await program.methods
+      .submitMilestone(0)
+      .accounts({
+        contract: contract7,
+        freelancer: freelancer.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    await program.methods
+      .raiseDispute(0)
+      .accounts({
+        contract: contract7,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    const recipientPreBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPreBal = await provider.connection.getBalance(freelancer.publicKey);
+    const clientPreBal = await provider.connection.getBalance(client.publicKey);
+
+    // Freelancer proposes Split with fee config
+    await program.methods
+      .resolveDispute(0, { split: {} })
+      .accounts({
+        contract: contract7,
+        vault: vault7,
+        caller: freelancer.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint,
+        badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        config: configPda,
+        feeRecipient: feeRecipient.publicKey,
+      } as any)
+      .signers([freelancer])
+      .rpc();
+
+    // Client matches Split proposal with fee config
+    await program.methods
+      .resolveDispute(0, { split: {} })
+      .accounts({
+        contract: contract7,
+        vault: vault7,
+        caller: client.publicKey,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        reputation: reputationPda,
+        badgeMint,
+        badgeTokenAccount,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        config: configPda,
+        feeRecipient: feeRecipient.publicKey,
+      } as any)
+      .rpc();
+
+    const recipientPostBal = await provider.connection.getBalance(feeRecipient.publicKey);
+    const freelancerPostBal = await provider.connection.getBalance(freelancer.publicKey);
+    const clientPostBal = await provider.connection.getBalance(client.publicKey);
+
+    // Split: 40_000_000 / 2 = 20_000_000 freelancer gross, 20_000_000 client
+    // Fee: 2.5% of 20_000_000 = 500_000 lamports
+    // Freelancer net: 19_500_000 lamports
+    const expectedFee = 500_000;
+    const expectedFreelancerPayout = 19_500_000;
+
+    assert.equal(
+      recipientPostBal - recipientPreBal,
+      expectedFee,
+      "Fee recipient receives 2.5% fee on freelancer's split"
+    );
+    assert.equal(
+      freelancerPostBal - freelancerPreBal,
+      expectedFreelancerPayout,
+      "Freelancer receives net split payout"
+    );
+    assert.approximately(
+      clientPostBal - clientPreBal,
+      20_000_000,
+      100_000 // tx fee tolerance for client signer
+    );
+
+    const contractAcc = await program.account.contract.fetch(contract7);
+    assert.deepEqual(contractAcc.milestones[0], { resolvedSplit: {} });
+  });
+
+  // ── Test 26 ─────────────────────────────────────────────────────────────────
+  it("26. admin updates protocol config and non-admin cannot update", async () => {
+    // Non-admin stranger fails
+    try {
+      await program.methods
+        .updateConfig(100, null)
+        .accounts({
+          config: configPda,
+          admin: stranger.publicKey,
+        } as any)
+        .signers([stranger])
+        .rpc();
+      assert.fail("Non-admin stranger should have failed");
+    } catch (err: any) {
+      assert.include(err.toString(), "Unauthorized");
+    }
+
+    // Admin updates fee to 100 bps (1%)
+    await program.methods
+      .updateConfig(100, null)
+      .accounts({
+        config: configPda,
+        admin: client.publicKey,
+      } as any)
+      .rpc();
+
+    const updatedConfig = await program.account.protocolConfig.fetch(configPda);
+    assert.equal(updatedConfig.feeBasisPoints, 100);
   });
 });

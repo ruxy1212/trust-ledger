@@ -140,6 +140,15 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "config",
+          "optional": true
+        },
+        {
+          "name": "fee_recipient",
+          "writable": true,
+          "optional": true
         }
       ],
       "args": [
@@ -483,6 +492,15 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "config",
+          "optional": true
+        },
+        {
+          "name": "fee_recipient",
+          "writable": true,
+          "optional": true
         }
       ],
       "args": [
@@ -567,9 +585,130 @@
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "initialize_config",
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "fee_recipient"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "fee_basis_points",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "update_config",
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "new_fee_recipient",
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_fee_basis_points",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "new_admin",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
+    {
+      "name": "ProtocolConfig",
+      "discriminator": [
+        207,
+        91,
+        250,
+        28,
+        152,
+        179,
+        215,
+        209
+      ]
+    },
     {
       "name": "Contract",
       "discriminator": [
@@ -695,6 +834,21 @@
       "code": 6016,
       "name": "DisputeResolutionMismatch",
       "msg": "Dispute resolution requires matching agreement or unilateral concession"
+    },
+    {
+      "code": 6017,
+      "name": "FeeTooHigh",
+      "msg": "Fee basis points exceed maximum allowed (max 1000 bps = 10%)"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidFeeRecipient",
+      "msg": "Invalid protocol fee recipient account"
+    },
+    {
+      "code": 6019,
+      "name": "FeeRecipientRequired",
+      "msg": "Fee recipient must be provided when fee basis points > 0"
     }
   ],
   "types": [
@@ -843,6 +997,30 @@
           {
             "name": "reputation_score",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_basis_points",
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }

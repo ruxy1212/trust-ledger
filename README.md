@@ -34,6 +34,7 @@ trust-ledger/
 - `reject_milestone` — client rejects with a reason (max 200 chars); milestone can be resubmitted
 - `raise_dispute` — either party can freeze a milestone in a `Disputed` state pending resolution
 - `resolve_dispute` — bilateral or unilateral resolution: client can release funds to freelancer, freelancer can refund to client, or both can mutually agree to split funds 50/50
+- `initialize_config` & `update_config` — protocol fee configuration PDA allowing admin to set sustainable protocol fees (capped at 10% / 1000 bps) and recipient, with payment hooks in approvals and dispute splits
 - Milestones must be settled in order (a milestone can't be submitted until the previous one is settled or approved)
 - Full happy-path and error-path test coverage; a non-transferable verification badge (`badge.rs`) is scaffolded for completed freelancers using Token-2022
 
@@ -50,6 +51,7 @@ trust-ledger/
 - [ ] Decide and implement the reputation-lookup agent's access model (open chatbot vs. restricted to registered clients/freelancers)
 - [ ] Wire the non-transferable badge mint into the approval flow end-to-end
 - [x] Basic dispute-resolution path (unilateral release/refund, or mutual split agreement)
+- [x] Protocol fee configuration & monetization hooks (capped at 10% max fee)
 - [ ] Mainnet deployment plan
 - [ ] Public reputation lookup — let any platform or client query a wallet's `ReputationRecord`
 

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 use crate::badge::mint_badge;
-use crate::state::{Contract, MilestoneStatus, ReputationRecord};
+use crate::state::{Contract, MilestoneStatus, ReputationRecord, ProtocolConfig};
 use crate::constants::{VAULT_SEED, REPUTATION_SEED, BADGE_SEED};
 use crate::errors::CapstoneError;
 
@@ -74,6 +74,13 @@ pub struct ApproveMilestone<'info> {
     pub associated_token_program: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
+
+    /// Optional protocol fee configuration account
+    pub config: Option<Account<'info, ProtocolConfig>>,
+
+    /// CHECK: Optional fee recipient account, verified if config has fees enabled
+    #[account(mut)]
+    pub fee_recipient: Option<UncheckedAccount<'info>>,
 }
 
 pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
@@ -93,6 +100,20 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
         contract.base_payout
     };
 
+    let (freelancer_payout, fee_payout) = if let Some(config) = &ctx.accounts.config {
+        if config.fee_basis_points > 0 {
+            let fee = payout.saturating_mul(config.fee_basis_points as u64) / 10_000;
+            let recipient = ctx.accounts.fee_recipient.as_ref()
+                .ok_or(CapstoneError::FeeRecipientRequired)?;
+            require_keys_eq!(recipient.key(), config.fee_recipient, CapstoneError::InvalidFeeRecipient);
+            (payout.saturating_sub(fee), fee)
+        } else {
+            (payout, 0)
+        }
+    } else {
+        (payout, 0)
+    };
+
     let contract_key = contract.key();
     let vault_bump = ctx.bumps.vault;
     let vault_signer_seeds: &[&[&[u8]]] = &[&[
@@ -108,7 +129,19 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
             to: ctx.accounts.freelancer.to_account_info(),
         },
     ).with_signer(vault_signer_seeds);
-    transfer(cpi_ctx, payout)?;
+    transfer(cpi_ctx, freelancer_payout)?;
+
+    if fee_payout > 0 {
+        let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
+        let fee_cpi = CpiContext::new(
+            ctx.accounts.system_program.key(),
+            Transfer {
+                from: ctx.accounts.vault.to_account_info(),
+                to: recipient.to_account_info(),
+            },
+        ).with_signer(vault_signer_seeds);
+        transfer(fee_cpi, fee_payout)?;
+    }
 
     // Check BEFORE incrementing: this is that freelancer's first-ever
     // completed milestone iff their reputation count is still 0.
