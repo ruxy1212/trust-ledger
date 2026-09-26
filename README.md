@@ -57,4 +57,4 @@ trust-ledger/
 
 ## Status
 
-Devnet only. Not audited. Actively building toward the MLH x Solana grant milestone.
+Devnet only. Not audited. Actively building toward.
