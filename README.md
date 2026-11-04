@@ -50,7 +50,7 @@ trust-ledger/
 - [ ] Wire up the full contract lifecycle in the frontend: create → submit → approve/reject → dispute → resolve
 - [ ] Decide and implement the reputation-lookup agent's access model (open chatbot vs. restricted to registered clients/freelancers)
 - [ ] Wire the non-transferable badge mint into the approval flow end-to-end
-- [x] Basic dispute-resolution path (unilateral release/refund, or mutual split agreement)
+- [ ] Basic dispute-resolution path (unilateral release/refund, a separate verifier agent or mutual split agreement)
 - [x] Protocol fee configuration & monetization hooks (capped at 10% max fee)
 - [ ] Mainnet deployment plan
 - [ ] Public reputation lookup — let any platform or client query a wallet's `ReputationRecord`
