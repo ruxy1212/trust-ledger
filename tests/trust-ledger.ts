@@ -34,6 +34,10 @@ describe("trust-ledger", () => {
     await provider.connection.confirmTransaction({ signature, ...latestBlockhash });
   }
 
+  const defaultDeliverable = "https://github.com/freelancer/repo/commit/a1b2c3d4";
+  const defaultDescriptions = (count: number) =>
+    Array.from({ length: count }, (_, i) => `Milestone ${i + 1} requirement spec`);
+
   // Helper: derive contract + vault PDAs
   function deriveContractPdas(clientPk: anchor.web3.PublicKey, freelancerPk: anchor.web3.PublicKey, contractId: typeof BN) {
     const [contractPda] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -112,7 +116,7 @@ describe("trust-ledger", () => {
     const vaultPreBalance = await provider.connection.getBalance(vaultPda);
 
     await program.methods
-      .createContract(contractId, amount, milestoneCount)
+      .createContract(contractId, amount, milestoneCount, defaultDescriptions(milestoneCount))
       .accounts({
         contract: contractPda,
         vault: vaultPda,
@@ -145,6 +149,8 @@ describe("trust-ledger", () => {
       { notSubmitted: {} },
       { notSubmitted: {} },
     ]);
+    assert.deepEqual(contractAcc.milestoneDescriptions, defaultDescriptions(milestoneCount));
+    assert.deepEqual(contractAcc.submissions, ["", "", ""]);
   });
 
   // ── Test 3 ──────────────────────────────────────────────────────────────────
@@ -158,7 +164,7 @@ describe("trust-ledger", () => {
     const freelancerPreBalance = await provider.connection.getBalance(freelancer.publicKey);
 
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contractPda,
         freelancer: freelancer.publicKey,
@@ -168,6 +174,7 @@ describe("trust-ledger", () => {
 
     let contractAcc = await program.account.contract.fetch(contractPda);
     assert.deepEqual(contractAcc.milestones[0], { submitted: {} });
+    assert.equal(contractAcc.submissions[0], defaultDeliverable);
 
     await program.methods
       .approveMilestone(0)
@@ -214,7 +221,7 @@ describe("trust-ledger", () => {
   it("4. wrong wallet cannot approve a milestone", async () => {
     // Submit milestone 1 first so it is in Submitted state
     await program.methods
-      .submitMilestone(1)
+      .submitMilestone(1, defaultDeliverable)
       .accounts({
         contract: contractPda,
         freelancer: freelancer.publicKey,
@@ -267,7 +274,7 @@ describe("trust-ledger", () => {
   // ── Test 6 ──────────────────────────────────────────────────────────────────
   it("6. freelancer resubmits after rejection and client approves", async () => {
     await program.methods
-      .submitMilestone(1)
+      .submitMilestone(1, "https://github.com/freelancer/repo/commit/fix-formatting-1234")
       .accounts({
         contract: contractPda,
         freelancer: freelancer.publicKey,
@@ -339,7 +346,7 @@ describe("trust-ledger", () => {
   it("8. freelancer raises a dispute after rejection", async () => {
     // Submit and reject milestone 2
     await program.methods
-      .submitMilestone(2)
+      .submitMilestone(2, defaultDeliverable)
       .accounts({
         contract: contractPda,
         freelancer: freelancer.publicKey,
@@ -424,7 +431,7 @@ describe("trust-ledger", () => {
     );
 
     await program.methods
-      .createContract(optId, new BN(0.1 * anchor.web3.LAMPORTS_PER_SOL), 1)
+      .createContract(optId, new BN(0.1 * anchor.web3.LAMPORTS_PER_SOL), 1, ["Optional profile contract spec"])
       .accounts({
         contract: optContract,
         vault: optVault,
@@ -449,7 +456,7 @@ describe("trust-ledger", () => {
     const amount2 = new BN(0.5 * anchor.web3.LAMPORTS_PER_SOL);
 
     await program.methods
-      .createContract(contractId2, amount2, 1)
+      .createContract(contractId2, amount2, 1, ["Second contract spec"])
       .accounts({
         contract: contract2,
         vault: vault2,
@@ -460,7 +467,7 @@ describe("trust-ledger", () => {
       .rpc();
 
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contract2,
         freelancer: freelancer.publicKey,
@@ -505,7 +512,7 @@ describe("trust-ledger", () => {
     const MS_COUNT = 3;
 
     await program.methods
-      .createContract(contractId3, UNEVEN_AMOUNT, MS_COUNT)
+      .createContract(contractId3, UNEVEN_AMOUNT, MS_COUNT, defaultDescriptions(MS_COUNT))
       .accounts({
         contract: contract3,
         vault: vault3,
@@ -522,7 +529,7 @@ describe("trust-ledger", () => {
     // Approve all 3 milestones and track vault balance
     for (let i = 0; i < MS_COUNT; i++) {
       await program.methods
-        .submitMilestone(i)
+        .submitMilestone(i, defaultDeliverable)
         .accounts({ contract: contract3, freelancer: freelancer.publicKey } as any)
         .signers([freelancer])
         .rpc();
@@ -564,7 +571,7 @@ describe("trust-ledger", () => {
     );
 
     await program.methods
-      .createContract(contractId4, new BN(0.3 * anchor.web3.LAMPORTS_PER_SOL), 3)
+      .createContract(contractId4, new BN(0.3 * anchor.web3.LAMPORTS_PER_SOL), 3, defaultDescriptions(3))
       .accounts({
         contract: contract4,
         vault: vault4,
@@ -578,7 +585,7 @@ describe("trust-ledger", () => {
     // must fail, since its predecessor (0) hasn't been approved yet.
     try {
       await program.methods
-        .submitMilestone(1)
+        .submitMilestone(1, defaultDeliverable)
         .accounts({
           contract: contract4,
           freelancer: freelancer.publicKey,
@@ -592,7 +599,7 @@ describe("trust-ledger", () => {
 
     // Milestone 0 is fair game and should still succeed normally.
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contract4,
         freelancer: freelancer.publicKey,
@@ -654,7 +661,7 @@ describe("trust-ledger", () => {
 
     try {
       await program.methods
-        .createContract(selfContractId, new BN(0.1 * anchor.web3.LAMPORTS_PER_SOL), 1)
+        .createContract(selfContractId, new BN(0.1 * anchor.web3.LAMPORTS_PER_SOL), 1, ["Self contract"])
         .accounts({
           contract: selfContract,
           vault: selfVault,
@@ -678,7 +685,7 @@ describe("trust-ledger", () => {
 
     try {
       await program.methods
-        .createContract(tinyContractId, new BN(5_000_000), 1) // 0.005 SOL < 0.01 SOL
+        .createContract(tinyContractId, new BN(5_000_000), 1, ["Tiny contract"]) // 0.005 SOL < 0.01 SOL
         .accounts({
           contract: tinyContract,
           vault: tinyVault,
@@ -704,7 +711,7 @@ describe("trust-ledger", () => {
       // 0.01 SOL (10_000_000) across 10 milestones gives base_payout = 1_000_000,
       // which is below MIN_MILESTONE_PAYOUT_LAMPORTS (2_000_000 = 0.002 SOL)
       await program.methods
-        .createContract(microContractId, new BN(10_000_000), 10)
+        .createContract(microContractId, new BN(10_000_000), 10, defaultDescriptions(10))
         .accounts({
           contract: microContract,
           vault: microVault,
@@ -760,7 +767,7 @@ describe("trust-ledger", () => {
     );
 
     await program.methods
-      .createContract(contractId4, new BN(40_000_000), 2) // 0.04 SOL across 2 milestones = 0.02 SOL each
+      .createContract(contractId4, new BN(40_000_000), 2, defaultDescriptions(2)) // 0.04 SOL across 2 milestones = 0.02 SOL each
       .accounts({
         contract: contract4,
         vault: vault4,
@@ -772,7 +779,7 @@ describe("trust-ledger", () => {
 
     // Freelancer submits milestone 0
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contract4,
         freelancer: freelancer.publicKey,
@@ -842,7 +849,7 @@ describe("trust-ledger", () => {
 
     // Pipeline deadlock check: milestone 1 can now be submitted because milestone 0 is settled
     await program.methods
-      .submitMilestone(1)
+      .submitMilestone(1, defaultDeliverable)
       .accounts({
         contract: contract4,
         freelancer: freelancer.publicKey,
@@ -862,7 +869,7 @@ describe("trust-ledger", () => {
     );
 
     await program.methods
-      .createContract(contractId5, new BN(20_000_000), 1) // 0.02 SOL
+      .createContract(contractId5, new BN(20_000_000), 1, ["Split test spec"]) // 0.02 SOL
       .accounts({
         contract: contract5,
         vault: vault5,
@@ -873,7 +880,7 @@ describe("trust-ledger", () => {
       .rpc();
 
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contract5,
         freelancer: freelancer.publicKey,
@@ -993,7 +1000,7 @@ describe("trust-ledger", () => {
     const CONTRACT_AMOUNT = new BN(100_000_000); // 0.1 SOL
 
     await program.methods
-      .createContract(contractId6, CONTRACT_AMOUNT, 1)
+      .createContract(contractId6, CONTRACT_AMOUNT, 1, ["Fee test spec"])
       .accounts({
         contract: contract6,
         vault: vault6,
@@ -1004,7 +1011,7 @@ describe("trust-ledger", () => {
       .rpc();
 
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contract6,
         freelancer: freelancer.publicKey,
@@ -1066,7 +1073,7 @@ describe("trust-ledger", () => {
     const CONTRACT_AMOUNT = new BN(40_000_000); // 0.04 SOL
 
     await program.methods
-      .createContract(contractId7, CONTRACT_AMOUNT, 1)
+      .createContract(contractId7, CONTRACT_AMOUNT, 1, ["Fee split test spec"])
       .accounts({
         contract: contract7,
         vault: vault7,
@@ -1077,7 +1084,7 @@ describe("trust-ledger", () => {
       .rpc();
 
     await program.methods
-      .submitMilestone(0)
+      .submitMilestone(0, defaultDeliverable)
       .accounts({
         contract: contract7,
         freelancer: freelancer.publicKey,
@@ -1201,5 +1208,80 @@ describe("trust-ledger", () => {
 
     const updatedConfig = await program.account.protocolConfig.fetch(configPda);
     assert.equal(updatedConfig.feeBasisPoints, 100);
+  });
+
+  // ── Test 27 ─────────────────────────────────────────────────────────────────
+  it("27. rejects contract creation with mismatched or empty milestone descriptions", async () => {
+    const testId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: cPda, vaultPda: vPda } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, testId
+    );
+
+    // Mismatched count (milestone_count is 2, descriptions count is 1)
+    try {
+      await program.methods
+        .createContract(testId, new BN(20_000_000), 2, ["Only 1 description"])
+        .accounts({
+          contract: cPda,
+          vault: vPda,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Should have failed with MilestoneDescriptionsMismatch");
+    } catch (err: any) {
+      assert.include(err.toString(), "MilestoneDescriptionsMismatch");
+    }
+
+    // Empty description string
+    try {
+      await program.methods
+        .createContract(testId, new BN(20_000_000), 2, ["First valid spec", "   "])
+        .accounts({
+          contract: cPda,
+          vault: vPda,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Should have failed with MilestoneDescriptionEmpty");
+    } catch (err: any) {
+      assert.include(err.toString(), "MilestoneDescriptionEmpty");
+    }
+  });
+
+  // ── Test 28 ─────────────────────────────────────────────────────────────────
+  it("28. rejects milestone submission without deliverable proof", async () => {
+    const testId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: cPda, vaultPda: vPda } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, testId
+    );
+
+    await program.methods
+      .createContract(testId, new BN(20_000_000), 1, ["Valid requirement spec"])
+      .accounts({
+        contract: cPda,
+        vault: vPda,
+        client: client.publicKey,
+        freelancer: freelancer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    try {
+      await program.methods
+        .submitMilestone(0, "   ")
+        .accounts({
+          contract: cPda,
+          freelancer: freelancer.publicKey,
+        } as any)
+        .signers([freelancer])
+        .rpc();
+      assert.fail("Should have failed with DeliverableRequired");
+    } catch (err: any) {
+      assert.include(err.toString(), "DeliverableRequired");
+    }
   });
 });

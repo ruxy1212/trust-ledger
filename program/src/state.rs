@@ -47,6 +47,10 @@ pub struct Contract {
     pub remainder: u64,
     #[max_len(10)] // Supports up to 10 milestones max
     pub milestones: Vec<MilestoneStatus>,
+    #[max_len(10, 100)] // Scope/description per milestone (up to 100 chars each)
+    pub milestone_descriptions: Vec<String>,
+    #[max_len(10, 200)] // Submission deliverable (GitHub commit/PR URL, live link, up to 200 chars each)
+    pub submissions: Vec<String>,
     #[max_len(10, 200)] // Array of rejection reasons per milestone index
     pub rejection_reasons: Vec<String>,
     #[max_len(10)]

@@ -25,12 +25,17 @@ pub mod trust_ledger {
         contract_id: u64,
         amount: u64,
         milestone_count: u8,
+        milestone_descriptions: Vec<String>,
     ) -> Result<()> {
-        create_contract::handler(ctx, contract_id, amount, milestone_count)
+        create_contract::handler(ctx, contract_id, amount, milestone_count, milestone_descriptions)
     }
 
-    pub fn submit_milestone(ctx: Context<SubmitMilestone>, index: u8) -> Result<()> {
-        submit_milestone::handler(ctx, index)
+    pub fn submit_milestone(
+        ctx: Context<SubmitMilestone>,
+        index: u8,
+        deliverable_uri: String,
+    ) -> Result<()> {
+        submit_milestone::handler(ctx, index, deliverable_uri)
     }
 
     pub fn approve_milestone(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {

@@ -12,7 +12,11 @@ pub struct SubmitMilestone<'info> {
     pub freelancer: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<SubmitMilestone>, index: u8) -> Result<()> {
+pub fn handler(ctx: Context<SubmitMilestone>, index: u8, deliverable_uri: String) -> Result<()> {
+    let trimmed = deliverable_uri.trim();
+    require!(!trimmed.is_empty(), CapstoneError::DeliverableRequired);
+    require!(trimmed.len() <= 200, CapstoneError::DeliverableTooLong);
+
     let contract = &mut ctx.accounts.contract;
     require!(index < contract.milestone_count, CapstoneError::MilestoneOutOfRange);
 
@@ -41,6 +45,7 @@ pub fn handler(ctx: Context<SubmitMilestone>, index: u8) -> Result<()> {
     }
 
     contract.milestones[index as usize] = MilestoneStatus::Submitted;
+    contract.submissions[index as usize] = trimmed.to_string();
     Ok(())
 }
 

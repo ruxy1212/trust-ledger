@@ -11,6 +11,8 @@ export type Role = "client" | "freelancer" | "viewer";
 export type ContractView = {
   milestoneCount: number;
   milestones: unknown[]; // decoded MilestoneStatus enum objects
+  milestoneDescriptions?: string[];
+  submissions?: string[];
   rejectionReasons: string[];
   disputeResolutions?: (unknown | null)[];
   basePayout: BN;
@@ -30,7 +32,7 @@ export function MilestoneTracker({
   contract: ContractView;
   role: Role;
   pendingIndex: number | null;
-  onSubmit: (index: number) => void;
+  onSubmit: (index: number, deliverableUri: string) => void;
   onApprove: (index: number) => void;
   onReject: (index: number, reason: string) => void;
   onDispute: (index: number) => void;
@@ -59,13 +61,15 @@ export function MilestoneTracker({
             key={index}
             index={index}
             status={milestoneStatusName(status)}
+            description={contract.milestoneDescriptions?.[index]}
+            submission={contract.submissions?.[index]}
             reason={contract.rejectionReasons[index]}
             disputeProposal={disputeProposal}
             payoutSol={lamportsToSol(payout)}
             role={role}
             isPending={pendingIndex === index}
             isCurrent={firstUnresolvedIndex === -1 || index === firstUnresolvedIndex}
-            onSubmit={() => onSubmit(index)}
+            onSubmit={(deliverableUri) => onSubmit(index, deliverableUri)}
             onApprove={() => onApprove(index)}
             onReject={(reason) => onReject(index, reason)}
             onDispute={() => onDispute(index)}
@@ -80,6 +84,8 @@ export function MilestoneTracker({
 function MilestoneRow({
   index,
   status,
+  description,
+  submission,
   reason,
   disputeProposal,
   payoutSol,
@@ -94,13 +100,15 @@ function MilestoneRow({
 }: {
   index: number;
   status: string;
+  description?: string;
+  submission?: string;
   reason: string;
   disputeProposal?: string | null;
   payoutSol: number;
   role: Role;
   isPending: boolean;
   isCurrent: boolean;
-  onSubmit: () => void;
+  onSubmit: (deliverableUri: string) => void;
   onApprove: () => void;
   onReject: (reason: string) => void;
   onDispute: () => void;
@@ -108,6 +116,8 @@ function MilestoneRow({
 }) {
   const [rejecting, setRejecting] = useState(false);
   const [reasonDraft, setReasonDraft] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [deliverableDraft, setDeliverableDraft] = useState("");
 
   const isDisputed = status === "disputed";
   const isSettled =
@@ -143,7 +153,12 @@ function MilestoneRow({
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-alter-secondary">
+          {description && (
+            <p className="mt-1 text-sm font-medium text-alter-primary">
+              {description}
+            </p>
+          )}
+          <p className="mt-0.5 text-xs text-alter-muted">
             {STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status}
           </p>
         </div>
@@ -168,6 +183,31 @@ function MilestoneRow({
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {submission && (
+          <motion.div
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-3 rounded-sm border border-border bg-elevated px-3 py-2 text-xs text-alter-secondary"
+          >
+            <span className="text-alter-muted">Deliverable proof: </span>
+            {submission.startsWith("http") ? (
+              <a
+                href={submission}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-accent hover:underline break-all"
+              >
+                {submission}
+              </a>
+            ) : (
+              <span className="font-mono text-alter-primary break-all">{submission}</span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {reason && (status === "rejected" || status === "disputed") && (
@@ -219,14 +259,49 @@ function MilestoneRow({
 
       {/* Freelancer actions */}
       {role === "freelancer" && isCurrent && (status === "notSubmitted" || status === "rejected") && (
-        <div className="mt-4 flex gap-2">
-          <ActionButton onClick={onSubmit} disabled={isPending} primary>
-            {status === "rejected" ? "Resubmit" : "Submit milestone"}
-          </ActionButton>
-          {status === "rejected" && (
-            <ActionButton onClick={onDispute} disabled={isPending}>
-              Raise dispute
-            </ActionButton>
+        <div className="mt-4">
+          {!submitting ? (
+            <div className="flex gap-2">
+              <ActionButton onClick={() => setSubmitting(true)} disabled={isPending} primary>
+                {status === "rejected" ? "Resubmit deliverable" : "Submit milestone"}
+              </ActionButton>
+              {status === "rejected" && (
+                <ActionButton onClick={onDispute} disabled={isPending}>
+                  Raise dispute
+                </ActionButton>
+              )}
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="flex flex-col gap-2"
+            >
+              <input
+                type="text"
+                value={deliverableDraft}
+                onChange={(e) => setDeliverableDraft(e.target.value)}
+                maxLength={200}
+                placeholder="GitHub commit hash, PR link, or preview URL (e.g. https://github.com/...)"
+                className="w-full rounded-sm border border-border bg-elevated p-2 text-sm text-alter-primary outline-none focus-visible:border-primary"
+              />
+              <div className="flex gap-2">
+                <ActionButton
+                  onClick={() => {
+                    onSubmit(deliverableDraft);
+                    setSubmitting(false);
+                    setDeliverableDraft("");
+                  }}
+                  disabled={isPending || deliverableDraft.trim().length === 0}
+                  primary
+                >
+                  Confirm delivery
+                </ActionButton>
+                <ActionButton onClick={() => setSubmitting(false)} disabled={isPending}>
+                  Cancel
+                </ActionButton>
+              </div>
+            </motion.div>
           )}
         </div>
       )}

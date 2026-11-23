@@ -42,5 +42,15 @@ pub enum CapstoneError {
     InvalidFeeRecipient,
     #[msg("Fee recipient must be provided when fee basis points > 0")]
     FeeRecipientRequired,
+    #[msg("Milestone descriptions count must match milestone_count")]
+    MilestoneDescriptionsMismatch,
+    #[msg("Milestone description cannot be empty")]
+    MilestoneDescriptionEmpty,
+    #[msg("Milestone description is too long (max 100 chars)")]
+    MilestoneDescriptionTooLong,
+    #[msg("Deliverable proof URI is required when submitting a milestone")]
+    DeliverableRequired,
+    #[msg("Deliverable proof URI is too long (max 200 chars)")]
+    DeliverableTooLong,
 }
 

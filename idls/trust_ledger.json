@@ -251,6 +251,12 @@
         {
           "name": "milestone_count",
           "type": "u8"
+        },
+        {
+          "name": "milestone_descriptions",
+          "type": {
+            "vec": "string"
+          }
         }
       ]
     },
@@ -583,6 +589,10 @@
         {
           "name": "index",
           "type": "u8"
+        },
+        {
+          "name": "deliverable_uri",
+          "type": "string"
         }
       ]
     },
@@ -849,6 +859,31 @@
       "code": 6019,
       "name": "FeeRecipientRequired",
       "msg": "Fee recipient must be provided when fee basis points > 0"
+    },
+    {
+      "code": 6020,
+      "name": "MilestoneDescriptionsMismatch",
+      "msg": "Milestone descriptions count must match milestone_count"
+    },
+    {
+      "code": 6021,
+      "name": "MilestoneDescriptionEmpty",
+      "msg": "Milestone description cannot be empty"
+    },
+    {
+      "code": 6022,
+      "name": "MilestoneDescriptionTooLong",
+      "msg": "Milestone description is too long (max 100 chars)"
+    },
+    {
+      "code": 6023,
+      "name": "DeliverableRequired",
+      "msg": "Deliverable proof URI is required when submitting a milestone"
+    },
+    {
+      "code": 6024,
+      "name": "DeliverableTooLong",
+      "msg": "Deliverable proof URI is too long (max 200 chars)"
     }
   ],
   "types": [
@@ -889,6 +924,18 @@
                   "name": "MilestoneStatus"
                 }
               }
+            }
+          },
+          {
+            "name": "milestone_descriptions",
+            "type": {
+              "vec": "string"
+            }
+          },
+          {
+            "name": "submissions",
+            "type": {
+              "vec": "string"
             }
           },
           {

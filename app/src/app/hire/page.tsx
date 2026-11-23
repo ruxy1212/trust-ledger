@@ -27,8 +27,25 @@ export default function HirePage() {
   const [pastedAddress, setPastedAddress] = useState("");
   const [amountSol, setAmountSol] = useState("1");
   const [milestoneCount, setMilestoneCount] = useState(3);
+  const [milestoneDescriptions, setMilestoneDescriptions] = useState<string[]>([
+    "Milestone 1: Project kickoff & architecture",
+    "Milestone 2: Core feature implementation",
+    "Milestone 3: Final delivery & QA",
+  ]);
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const handleMilestoneCountChange = (count: number) => {
+    const validCount = Math.max(1, Math.min(10, count || 1));
+    setMilestoneCount(validCount);
+    setMilestoneDescriptions((prev) => {
+      const next = [...prev];
+      while (next.length < validCount) {
+        next.push(`Milestone ${next.length + 1}: Deliverable spec`);
+      }
+      return next.slice(0, validCount);
+    });
+  };
 
   useEffect(() => {
     fetchFreelancerOptions(readOnlyProgram)
@@ -49,6 +66,9 @@ export default function HirePage() {
   const isSelf = !!publicKey && !!freelancerPubkey && publicKey.equals(freelancerPubkey);
   const isAmountTooLow = amount < 0.01;
   const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < 0.002;
+  const hasValidDescriptions =
+    milestoneDescriptions.length === milestoneCount &&
+    milestoneDescriptions.every((d) => d.trim().length > 0 && d.trim().length <= 100);
 
   const canSubmit =
     status !== "submitting" &&
@@ -58,6 +78,7 @@ export default function HirePage() {
     !isSelf &&
     !isAmountTooLow &&
     !isMilestonePayoutTooLow &&
+    hasValidDescriptions &&
     milestoneCount >= 1 &&
     milestoneCount <= 10;
 
@@ -73,7 +94,12 @@ export default function HirePage() {
       const vaultPda = deriveVaultPda(contractPda);
 
       await program.methods
-        .createContract(contractId, solToLamportsBN(amount), milestoneCount)
+        .createContract(
+          contractId,
+          solToLamportsBN(amount),
+          milestoneCount,
+          milestoneDescriptions
+        )
         .accounts({
           contract: contractPda,
           vault: vaultPda,
@@ -207,10 +233,38 @@ export default function HirePage() {
             min={1}
             max={10}
             value={milestoneCount}
-            onChange={(e) => setMilestoneCount(Number(e.target.value))}
+            onChange={(e) => handleMilestoneCountChange(Number(e.target.value))}
             className="rounded-md border border-border bg-elevated px-3 py-2 font-mono text-alter-primary outline-none focus-visible:border-primary"
           />
         </label>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-alter-secondary">
+            Milestone scope specifications
+          </label>
+          <div className="flex flex-col gap-2">
+            {milestoneDescriptions.map((desc, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="font-mono text-xs text-alter-muted w-6">#{idx + 1}</span>
+                <input
+                  type="text"
+                  maxLength={100}
+                  value={desc}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMilestoneDescriptions((prev) => {
+                      const updated = [...prev];
+                      updated[idx] = val;
+                      return updated;
+                    });
+                  }}
+                  placeholder={`Requirements for milestone #${idx + 1} (max 100 chars)`}
+                  className="w-full rounded-md border border-border bg-elevated px-3 py-2 text-sm text-alter-primary outline-none focus-visible:border-primary"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
         {isMilestonePayoutTooLow && !isAmountTooLow && (
           <p className="text-xs text-error">
             Each milestone payout must be at least 0.002 SOL.

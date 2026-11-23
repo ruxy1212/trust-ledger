@@ -118,11 +118,11 @@ export default function ContractPage({
     }
   }
 
-  async function handleSubmit(index: number) {
+  async function handleSubmit(index: number, deliverableUri: string) {
     if (!program || !publicKey || !contractPda) return;
     await runAction(index, () =>
       program.methods
-        .submitMilestone(index)
+        .submitMilestone(index, deliverableUri)
         .accounts({ contract: contractPda, freelancer: publicKey })
         .rpc()
         .then(() => {})

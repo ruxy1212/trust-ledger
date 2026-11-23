@@ -28,7 +28,13 @@ pub struct CreateContract<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, milestone_count: u8) -> Result<()> {
+pub fn handler(
+    ctx: Context<CreateContract>,
+    _contract_id: u64,
+    amount: u64,
+    milestone_count: u8,
+    milestone_descriptions: Vec<String>,
+) -> Result<()> {
     require!(
         ctx.accounts.client.key() != ctx.accounts.freelancer.key(),
         CapstoneError::SelfContractNotAllowed
@@ -36,6 +42,16 @@ pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, mil
     require!(amount >= MIN_ESCROW_LAMPORTS, CapstoneError::EscrowTooSmall);
     require!(milestone_count > 0, CapstoneError::InvalidMilestoneCount);
     require!(milestone_count <= 10, CapstoneError::MilestoneOutOfRange);
+
+    require!(
+        milestone_descriptions.len() == milestone_count as usize,
+        CapstoneError::MilestoneDescriptionsMismatch
+    );
+    for desc in &milestone_descriptions {
+        let trimmed = desc.trim();
+        require!(!trimmed.is_empty(), CapstoneError::MilestoneDescriptionEmpty);
+        require!(trimmed.len() <= 100, CapstoneError::MilestoneDescriptionTooLong);
+    }
 
     let base_payout = amount / (milestone_count as u64);
     require!(base_payout >= MIN_MILESTONE_PAYOUT_LAMPORTS, CapstoneError::MilestonePayoutTooSmall);
@@ -49,14 +65,18 @@ pub fn handler(ctx: Context<CreateContract>, _contract_id: u64, amount: u64, mil
     contract.remainder = amount % (milestone_count as u64);
 
     let mut milestones = Vec::new();
+    let mut submissions = Vec::new();
     let mut reasons = Vec::new();
     let mut dispute_resolutions = Vec::new();
     for _ in 0..milestone_count {
         milestones.push(MilestoneStatus::NotSubmitted);
+        submissions.push(String::new());
         reasons.push(String::new());
         dispute_resolutions.push(None);
     }
     contract.milestones = milestones;
+    contract.milestone_descriptions = milestone_descriptions;
+    contract.submissions = submissions;
     contract.rejection_reasons = reasons;
     contract.dispute_resolutions = dispute_resolutions;
 

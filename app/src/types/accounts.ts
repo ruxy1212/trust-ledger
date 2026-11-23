@@ -72,6 +72,8 @@ export interface ContractAccount {
   basePayout: BN;
   remainder: BN;
   milestones: MilestoneStatus[];
+  milestoneDescriptions: string[];
+  submissions: string[];
   rejectionReasons: string[];
   disputeResolutions: (DisputeResolution | null)[];
 }
