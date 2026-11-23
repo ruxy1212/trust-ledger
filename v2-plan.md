@@ -171,15 +171,22 @@ The Trust Ledger v2 milestone elevates the protocol from an escrow counter into 
 
 ---
 
-## 3) Delivery Phases Overview
+## 3) Delivery Phases & Execution Strategy
 
-| Phase | Steps | Focus |
-| :--- | :--- | :--- |
-| **Phase 2.1** | Step 1 | Service exchange primitives: Milestone scope descriptions & deliverable proofs |
-| **Phase 2.2** | Step 2 | Anti-fraud safeguards: Maximum escrow limits & safety boundaries |
-| **Phase 2.3** | Step 3 | Multi-currency escrow: Devnet USDC SPL-Token vault architecture |
-| **Phase 2.4** | Step 4 & Step 5 | AI Arbiter Agent with GitHub evidence verification & settlement UI |
-| **Phase 2.5** | Step 6 | Next.js frontend UI: Currency toggle, deliverable modal, test suite |
+To ensure repository stability and prevent intermediate broken states (especially around on-chain account serialization and Anchor IDLs), execution is structured into **atomic single sweeps** where appropriate, with **Phase 2.4** decoupled into two distinct sub-slices to separate backend AI evaluation from frontend transaction signing:
+
+| Phase | Execution Model | Steps | Focus & Deliverables |
+| :--- | :---: | :--- | :--- |
+| **Phase 2.1** | **Single Sweep** | Step 1 | **Service Exchange Primitives:** Extend `Contract` state with `milestone_descriptions` & `submissions`; enforce non-empty scope on `create_contract` and deliverable URIs on `submit_milestone`; sync IDLs and tests. |
+| **Phase 2.2** | **Single Sweep** | Step 2 | **Anti-Fraud & Spending Ceilings:** Define `MAX_ESCROW_LAMPORTS` and `MAX_ESCROW_USDC`; add custom errors (`EscrowTooLarge`, `MilestonePayoutTooLarge`); enforce checks in `create_contract` and add boundary tests. |
+| **Phase 2.3** | **Single Sweep** | Step 3 | **Devnet USDC Multi-Currency Escrow:** Support SPL Token vault PDAs, handle 6 vs 9 decimals, add token CPIs in `create_contract`, `approve_milestone`, and `resolve_dispute`, and add token test cases. |
+| **Phase 2.4A** | **Sub-slice (Backend AI)** | Step 4 | **AI Arbiter Agent Engine:** Build `/api/arbiter`, GitHub API diff retrieval tool, Zod schemas, certainty scoring rubric (`0.00`–`1.00`), and evaluation unit tests. |
+| **Phase 2.4B** | **Sub-slice (Settlement Flow)** | Step 5 | **Dispute Settlement UI & On-Chain Hook:** Add interactive AI Arbiter recommendation card with certainty gauge in `MilestoneTracker.tsx`, and wire one-click transaction signing for `resolve_dispute`. |
+| **Phase 2.5** | **Single Sweep** | Step 6 | **Frontend Multi-Asset & Polish:** Update hire form with currency selector (SOL vs USDC), dynamic milestone spec inputs, deliverable submission modal, and spend warning alerts. |
+
+### Rationale for Sweep Strategy
+- **Phases 2.1, 2.2, 2.3, and 2.5 are run in Single Sweeps:** These touch on-chain state, account size allocations, and instruction interfaces. Executing them as atomic sweeps prevents desynchronization between Rust programs, Anchor IDLs, and TypeScript client tests.
+- **Phase 2.4 is split into 2.4A and 2.4B:** Decouples backend LLM prompt engineering and GitHub API diff fetching (2.4A) from client-side wallet signing and transaction confirmation (2.4B), ensuring the evaluation model is verified before wiring on-chain execution.
 
 ---
 
