@@ -52,5 +52,9 @@ pub enum CapstoneError {
     DeliverableRequired,
     #[msg("Deliverable proof URI is too long (max 200 chars)")]
     DeliverableTooLong,
+    #[msg("Contract amount exceeds maximum allowed safety ceiling (MAX_ESCROW_LAMPORTS)")]
+    EscrowTooLarge,
+    #[msg("Milestone payout exceeds maximum allowed safety ceiling")]
+    MilestonePayoutTooLarge,
 }
 

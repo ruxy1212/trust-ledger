@@ -65,6 +65,7 @@ export default function HirePage() {
   const amount = Number(amountSol);
   const isSelf = !!publicKey && !!freelancerPubkey && publicKey.equals(freelancerPubkey);
   const isAmountTooLow = amount < 0.01;
+  const isAmountTooHigh = amount > 100;
   const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < 0.002;
   const hasValidDescriptions =
     milestoneDescriptions.length === milestoneCount &&
@@ -77,6 +78,7 @@ export default function HirePage() {
     !!freelancerPubkey &&
     !isSelf &&
     !isAmountTooLow &&
+    !isAmountTooHigh &&
     !isMilestonePayoutTooLow &&
     hasValidDescriptions &&
     milestoneCount >= 1 &&
@@ -223,6 +225,11 @@ export default function HirePage() {
         {isAmountTooLow && amount > 0 && (
           <p className="text-xs text-error">
             Minimum contract escrow is 0.01 SOL (anti-farming floor).
+          </p>
+        )}
+        {isAmountTooHigh && (
+          <p className="text-xs text-error">
+            Maximum contract escrow is 100 SOL (anti-fraud safety ceiling).
           </p>
         )}
 

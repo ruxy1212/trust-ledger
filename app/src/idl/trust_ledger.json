@@ -884,6 +884,16 @@
       "code": 6024,
       "name": "DeliverableTooLong",
       "msg": "Deliverable proof URI is too long (max 200 chars)"
+    },
+    {
+      "code": 6025,
+      "name": "EscrowTooLarge",
+      "msg": "Contract amount exceeds maximum allowed safety ceiling (MAX_ESCROW_LAMPORTS)"
+    },
+    {
+      "code": 6026,
+      "name": "MilestonePayoutTooLarge",
+      "msg": "Milestone payout exceeds maximum allowed safety ceiling"
     }
   ],
   "types": [

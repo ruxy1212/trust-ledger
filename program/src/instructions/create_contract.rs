@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 use crate::state::{Contract, MilestoneStatus};
-use crate::constants::{CONTRACT_SEED, VAULT_SEED, MIN_ESCROW_LAMPORTS, MIN_MILESTONE_PAYOUT_LAMPORTS};
+use crate::constants::{
+    CONTRACT_SEED, VAULT_SEED, MIN_ESCROW_LAMPORTS, MAX_ESCROW_LAMPORTS,
+    MIN_MILESTONE_PAYOUT_LAMPORTS, MAX_MILESTONE_PAYOUT_LAMPORTS,
+};
 use crate::errors::CapstoneError;
 
 #[derive(Accounts)]
@@ -40,6 +43,7 @@ pub fn handler(
         CapstoneError::SelfContractNotAllowed
     );
     require!(amount >= MIN_ESCROW_LAMPORTS, CapstoneError::EscrowTooSmall);
+    require!(amount <= MAX_ESCROW_LAMPORTS, CapstoneError::EscrowTooLarge);
     require!(milestone_count > 0, CapstoneError::InvalidMilestoneCount);
     require!(milestone_count <= 10, CapstoneError::MilestoneOutOfRange);
 
@@ -55,6 +59,7 @@ pub fn handler(
 
     let base_payout = amount / (milestone_count as u64);
     require!(base_payout >= MIN_MILESTONE_PAYOUT_LAMPORTS, CapstoneError::MilestonePayoutTooSmall);
+    require!(base_payout <= MAX_MILESTONE_PAYOUT_LAMPORTS, CapstoneError::MilestonePayoutTooLarge);
 
     let contract = &mut ctx.accounts.contract;
     contract.client = ctx.accounts.client.key();

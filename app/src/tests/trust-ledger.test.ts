@@ -1157,4 +1157,33 @@ describe("trust-ledger frontend integration", () => {
       assert.include(err.toString(), "DeliverableRequired");
     }
   });
+
+  it("29. rejects contract creation above MAX_ESCROW_LAMPORTS (100 SOL)", async () => {
+    const hugeContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: hugeContract, vaultPda: hugeVault } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, hugeContractId
+    );
+
+    try {
+      // 100.01 SOL = 100_010_000_000 lamports > 100 SOL MAX_ESCROW_LAMPORTS
+      await program.methods
+        .createContract(
+          hugeContractId,
+          new BN("100010000000"),
+          1,
+          ["Escrow exceeding maximum cap"]
+        )
+        .accounts({
+          contract: hugeContract,
+          vault: hugeVault,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("Contract exceeding maximum escrow cap should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "EscrowTooLarge");
+    }
+  });
 });
