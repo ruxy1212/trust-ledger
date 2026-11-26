@@ -1,72 +1,97 @@
 # Trust Ledger
 
-An on-chain milestone escrow and portable reputation for freelance work, built on Solana blockchain network.
+An on-chain milestone escrow, AI-arbitrated dispute resolution protocol, and portable reputation layer for freelance work, built on the Solana blockchain.
 
-Started as a capstone for MLH's **100 Days of Solana**. Now being extended into a real product.
+Started as a capstone for MLH's **100 Days of Solana**. Now extended into a full service-exchange protocol with anti-fraud ceilings, multi-currency escrow, and autonomous AI dispute arbitration.
 
-## The problem
+## The Problem
 
-Freelance platforms today hold the money, hold the reputation, and take the cut. If a client ghosts after delivery, or a platform freezes a payout, the freelancer has little recourse, and often times, their track record disappears the moment they leave that platform.
+Freelance platforms today hold the money, hold the reputation, and take steep 5–20% cuts. If a client ghosts after delivery or a dispute arises, freelancers have little recourse, and subjective disagreements often lead to frozen funds. Furthermore, a freelancer's track record disappears the moment they leave that platform.
 
-## What Trust Ledger does
+## What Trust Ledger Does
 
-- **Trustless milestone escrow.** A client funds a contract on-chain. Funds release only when both sides confirm a milestone — no platform custody, no chargebacks, no "payment pending review."
-- **Portable reputation.** Every completed contract updates a public `ReputationRecord` tied to the freelancer's wallet — not to any one platform. That record travels with them.
-- **Built for more than just freelancers.** The same escrow primitive applies to contributor bounties, DAO payroll, and any relationship where one party pays another for milestone-based work.
+- **Trustless Multi-Currency Escrow:** Clients fund contracts in either **Native SOL** or **Devnet USDC** (`4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`). Escrow funds are managed on-chain via PDA vaults and released only upon milestone approval or settlement.
+- **Service Exchange Primitives:** Contracts are not empty financial counters: they store verified milestone specifications (up to 10 milestones) and require verifiable deliverables (GitHub commit hashes, PR URLs, or preview links) upon submission.
+- **AI Arbiter Agent with Certainty Scoring:** Autonomous dispute analysis engine that fetches GitHub commit diffs and modified files, cross-references them against agreed milestone scopes, evaluates client rejection claims, and outputs an objective verdict (`release_to_freelancer`, `refund_to_client`, or `split`) with a **Certainty Score (`0.00`–`1.00`)**.
+- **Anti-Fraud Ceilings & Safeguards:** Hard-coded limits prevent runaway drains and malicious exploits (`MAX_ESCROW_LAMPORTS` = 100 SOL, `MAX_ESCROW_USDC` = 50,000 USDC) alongside anti-farming minimums (`MIN_ESCROW_LAMPORTS` = 0.01 SOL, `MIN_ESCROW_USDC` = 1 USDC) and self-contract prevention.
+- **Portable On-Chain Reputation:** Every completed contract updates a public `ReputationRecord` (tracking completed counts, disputed counts, volume earned, and value-weighted scores) and mints a non-transferable Token-2022 soulbound badge to the freelancer's wallet.
 
-Settlement runs on Solana, so fees are sub-cent per transaction — a non-issue next to the 5–20% cuts incumbent marketplaces take.
+Settlement runs on Solana with sub-cent transaction fees and instant finality.
 
-## Repository structure
+## Repository Structure
 
 ```
 trust-ledger/
-├── program/     Anchor program (Rust) — the on-chain escrow + reputation logic
-└── app/         Next.js frontend — client & freelancer flows, reputation-lookup agent
+├── program/     Anchor program (Rust) — escrow, multi-token CPIs, reputation, and badges
+├── idls/        Compiled Anchor IDL for trust_ledger
+└── app/         Next.js 16 frontend — hire flow, milestone tracker, AI Arbiter card, and API
+    ├── src/agent/tools/   Dispute evidence aggregator & GitHub diff analyzer
+    ├── src/app/api/       Wallet-authenticated AI Arbiter & reputation endpoints
+    └── src/components/    Interactive milestone tracker & Arbiter recommendation card
 ```
 
-## What's implemented
+## What's Implemented
 
-**Program (`/program`)** — deployed and tested on devnet (`E68AQePth8MVtn2aHax23c6BWye8Mnw2fkDzCyTfqNEk`):
-- `create_profile` — freelancer registers a public profile
-- `create_contract` — client funds a contract with up to 10 milestones, split into a base payout + remainder
-  - Anti-farming safeguards: self-contracting (`client == freelancer`) is blocked, minimum escrow floor (0.01 SOL), and minimum milestone payout floor (0.002 SOL)
-- `submit_milestone` — freelancer marks a milestone as delivered
-- `approve_milestone` — client approves and releases payout for that milestone; updates the freelancer's `ReputationRecord` (accumulates `earned_volume` and value-weighted `reputation_score`)
-- `reject_milestone` — client rejects with a reason (max 200 chars); milestone can be resubmitted
-- `raise_dispute` — either party (client or freelancer) can freeze a milestone in a `Disputed` state pending resolution
-- `resolve_dispute` — bilateral or unilateral resolution: client can unilaterally release funds to freelancer, freelancer can unilaterally refund to client, or both can mutually agree to split funds 50/50
-- `initialize_config` & `update_config` — protocol fee configuration PDA allowing admin to set sustainable protocol fees (capped at 10% / 1000 bps) and recipient, with payment hooks in milestone approvals and dispute splits
-- Milestones must be settled in order (a milestone can't be submitted until the previous one is settled or approved)
-- Full happy-path and error-path test coverage (26 integration tests in `/tests`); a non-transferable verification badge (`badge.rs`) is scaffolded for completed freelancers using Token-2022
+### Program (`/program`) — Deployed & Tested on Devnet (`E68AQePth8MVtn2aHax23c6BWye8Mnw2fkDzCyTfqNEk`)
+- **`create_profile`**: Freelancer registers an on-chain display name profile PDA.
+- **`create_contract`**: Client funds a contract with milestone descriptions and optional `token_mint`:
+  - Enforces minimum floors (0.01 SOL / 1 USDC) and maximum anti-fraud ceilings (100 SOL / 50,000 USDC).
+  - Routes transfers through System Program (for SOL) or SPL Token `transfer_checked` (for Devnet USDC).
+- **`submit_milestone`**: Freelancer submits milestone deliverable proof URI (GitHub commit/PR URL, max 200 chars).
+- **`approve_milestone`**: Client approves deliverable; releases payout (and optional protocol fee) to freelancer ATA/wallet, increments reputation volume, and mints a non-transferable Token-2022 soulbound badge on first completion.
+- **`reject_milestone`**: Client rejects deliverable with recorded rationale (max 200 chars).
+- **`raise_dispute`**: Client or freelancer freezes a disputed milestone in `Disputed` state.
+- **`resolve_dispute`**: Settles disputed escrow via unilateral concession (client release / freelancer refund) or mutual 50/50 split, with multi-currency SPL Token vault CPI transfers.
+- **`initialize_config` & `update_config`**: Protocol fee management (capped at 10% / 1000 bps) with configurable recipient PDA.
+- Comprehensive test suite covering 30 integration tests in `tests/trust-ledger.ts` and `app/src/tests/trust-ledger.test.ts`.
 
-**Frontend & Agent (`/app`)** — Next.js app:
-- Routes scaffolded for `dashboard`, `hire`, `contract`, and `profile` flows
-- Anchor IDL and account schemas synchronized with on-chain dispute and reputation state
-- `src/agent/` — reputation-lookup AI assistant guarded by Ed25519 Solana wallet signature authentication and durable rate-limiting (Upstash Redis + in-memory fallback)
-- Integration test coverage in `/app/src/tests/`
+### Frontend & AI Arbiter (`/app`)
+- **Multi-Currency Hire Flow (`/hire`)**: Currency toggle (SOL vs USDC), dynamic milestone specification builder, and real-time spending warnings.
+- **Interactive Milestone Tracker (`/contract/[pda]`)**: Visual progress bar, deliverable submission modal, proof links, and dispute controls.
+- **AI Arbiter Dispute Card (`ArbiterCard.tsx`)**:
+  - Ed25519 cryptographic wallet signature authentication preventing unauthorized API calls and replay attacks.
+  - Interactive Certainty Gauge (color-coded Emerald `≥85%`, Amber `≥65%`, Rose `<65%`).
+  - Structured evidence breakdown comparing agreed scope, submitted GitHub diffs, and client rejection claims.
+  - One-click on-chain settlement trigger directly executing `resolveDispute`.
+- **Backend API Routes (`/api/arbiter` & `/api/agent`)**:
+  - GitHub REST API diff retrieval for public repos, commit hashes, and pull requests.
+  - Durable rate limiting (Upstash Redis with in-memory fallback).
+  - Impartial judicial evaluation prompt powered by OpenAI (`gpt-4o-mini`) with deterministic heuristic fallback.
+
+## Verification & Test Suite
+
+Run integration tests against localnet or devnet:
+
+```bash
+# Verify Anchor Rust program compilation
+cargo check --manifest-path program/Cargo.toml
+
+# Run TypeScript Mocha integration tests (30 tests)
+npm test
+```
 
 ## Roadmap & Checklist
 
-### Implemented (v1)
+### Completed (v1 & v2)
 - [x] Workspace & build standardization (Anchor + pnpm workspace)
 - [x] Anti-farming & self-contracting protocol constraints (`MIN_ESCROW_LAMPORTS`, `MIN_MILESTONE_PAYOUT_LAMPORTS`)
 - [x] Value-weighted reputation metrics (`earned_volume`, `reputation_score`)
 - [x] Dual-party dispute initiation rights (client and freelancer)
 - [x] On-chain dispute resolution flow (unilateral release/refund, mutual 50/50 split)
 - [x] Protocol fee configuration & monetization hooks (capped at 10% max fee)
-- [x] Agent security hardening: Ed25519 wallet auth, timestamp replay protection, durable rate limiting
+- [x] Non-transferable soulbound badge minting using Token-2022
+- [x] Service exchange primitives (on-chain milestone descriptions and deliverable proof URIs)
+- [x] Anti-fraud safety ceilings (`MAX_ESCROW_LAMPORTS`, `MAX_ESCROW_USDC`)
+- [x] Multi-currency escrow (Devnet USDC SPL Token vault PDAs with 6 vs 9 decimal handling)
+- [x] AI Arbiter Agent engine with GitHub code diff inspection and Certainty Scoring (`0.00`–`1.00`)
+- [x] Arbiter UI card with one-click on-chain dispute settlement
+- [x] Frontend multi-currency selector and real-time spending warnings
 
-### Upcoming (v2 — see [v2-plan.md](v2-plan.md))
-- [ ] **Service Exchange Primitives:** On-chain milestone scope descriptions in `create_contract` and verifiable deliverable proofs (Git commit/PR URLs, live previews) in `submit_milestone`
-- [ ] **Anti-Fraud & Spending Limits:** Hard caps on maximum escrow size (`MAX_ESCROW_LAMPORTS`, `MAX_ESCROW_USDC`) and velocity rate limits
-- [ ] **Multi-Currency Escrow:** Devnet USDC (`4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`) SPL Token vault support alongside native SOL
-- [ ] **AI Arbiter Agent:** Autonomous dispute analysis fetching Git diffs/deliverable proof, comparing with scope, and scoring certainty (0.00–1.00)
-- [ ] **Arbiter-Assisted Settlement:** One-click on-chain settlement from Arbiter recommendations
-- [ ] **Frontend Lifecycle Integration:** Complete end-to-end interactive UI for contract creation, deliverable submission modal, milestone dispute, and resolution
-- [ ] **Token-2022 Badge Integration:** Complete automated non-transferable reputation badge minting in frontend flow
-- [ ] **Public Reputation API:** Open query endpoint for third-party platforms to query a wallet's `ReputationRecord`
-- [ ] **Mainnet Deployment Plan:** Formal audits and mainnet-beta configuration
+### Upcoming (v3)
+- [ ] Automated Oracle settlement for ultra-high certainty disputes (>0.95)
+- [ ] Public Reputation Query API for third-party marketplace integrations
+- [ ] Mainnet deployment, formal security audit, and production token list support
 
 ## Status
 
-Devnet only. Not audited. Actively building toward.
+Devnet only. Not audited. Actively building toward mainnet readiness.
