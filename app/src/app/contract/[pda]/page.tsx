@@ -248,6 +248,7 @@ export default function ContractPage({
 
       <MilestoneTracker
         contract={contract}
+        contractAddress={contractPda.toBase58()}
         role={role}
         pendingIndex={pendingIndex}
         onSubmit={handleSubmit}

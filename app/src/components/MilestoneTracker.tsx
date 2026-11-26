@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import BN from "bn.js";
 import { lamportsToSol, milestoneStatusName, STATUS_LABEL } from "@/lib/format";
+import { ArbiterCard } from "./ArbiterCard";
 
 export type Role = "client" | "freelancer" | "viewer";
 
@@ -21,6 +22,7 @@ export type ContractView = {
 
 export function MilestoneTracker({
   contract,
+  contractAddress,
   role,
   pendingIndex,
   onSubmit,
@@ -30,6 +32,7 @@ export function MilestoneTracker({
   onResolve,
 }: {
   contract: ContractView;
+  contractAddress?: string;
   role: Role;
   pendingIndex: number | null;
   onSubmit: (index: number, deliverableUri: string) => void;
@@ -60,6 +63,7 @@ export function MilestoneTracker({
           <MilestoneRow
             key={index}
             index={index}
+            contractAddress={contractAddress}
             status={milestoneStatusName(status)}
             description={contract.milestoneDescriptions?.[index]}
             submission={contract.submissions?.[index]}
@@ -83,6 +87,7 @@ export function MilestoneTracker({
 
 function MilestoneRow({
   index,
+  contractAddress,
   status,
   description,
   submission,
@@ -99,6 +104,7 @@ function MilestoneRow({
   onResolve,
 }: {
   index: number;
+  contractAddress?: string;
   status: string;
   description?: string;
   submission?: string;
@@ -223,38 +229,50 @@ function MilestoneRow({
         )}
       </AnimatePresence>
 
-      {/* Disputed Milestone Resolution Controls */}
+      {/* Disputed Milestone Resolution Controls & AI Arbiter */}
       {isDisputed && (
-        <div className="mt-4 rounded-md border border-border bg-elevated p-3">
-          <p className="text-xs font-medium text-alter-primary mb-2">Dispute Resolution:</p>
-          {disputeProposal && (
-            <p className="text-xs text-info mb-3">
-              Proposal on record: <span className="font-mono">{disputeProposal}</span>. When the other party confirms, funds release automatically.
-            </p>
+        <>
+          {contractAddress && (
+            <ArbiterCard
+              contractAddress={contractAddress}
+              milestoneIndex={index}
+              role={role}
+              isPending={isPending}
+              onAcceptRecommendation={(res) => onResolve(res)}
+            />
           )}
-          <div className="flex flex-wrap gap-2">
-            {role === "client" && (
-              <>
-                <ActionButton onClick={() => onResolve("releaseToFreelancer")} disabled={isPending} primary>
-                  Release to Freelancer
-                </ActionButton>
-                <ActionButton onClick={() => onResolve("split")} disabled={isPending}>
-                  {disputeProposal === "split" ? "Accept 50/50 Split" : "Propose 50/50 Split"}
-                </ActionButton>
-              </>
+
+          <div className="mt-4 rounded-md border border-border bg-elevated p-3">
+            <p className="text-xs font-medium text-alter-primary mb-2">Dispute Resolution:</p>
+            {disputeProposal && (
+              <p className="text-xs text-info mb-3">
+                Proposal on record: <span className="font-mono">{disputeProposal}</span>. When the other party confirms, funds release automatically.
+              </p>
             )}
-            {role === "freelancer" && (
-              <>
-                <ActionButton onClick={() => onResolve("refundToClient")} disabled={isPending} primary>
-                  Refund to Client
-                </ActionButton>
-                <ActionButton onClick={() => onResolve("split")} disabled={isPending}>
-                  {disputeProposal === "split" ? "Accept 50/50 Split" : "Propose 50/50 Split"}
-                </ActionButton>
-              </>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {role === "client" && (
+                <>
+                  <ActionButton onClick={() => onResolve("releaseToFreelancer")} disabled={isPending} primary>
+                    Release to Freelancer
+                  </ActionButton>
+                  <ActionButton onClick={() => onResolve("split")} disabled={isPending}>
+                    {disputeProposal === "split" ? "Accept 50/50 Split" : "Propose 50/50 Split"}
+                  </ActionButton>
+                </>
+              )}
+              {role === "freelancer" && (
+                <>
+                  <ActionButton onClick={() => onResolve("refundToClient")} disabled={isPending} primary>
+                    Refund to Client
+                  </ActionButton>
+                  <ActionButton onClick={() => onResolve("split")} disabled={isPending}>
+                    {disputeProposal === "split" ? "Accept 50/50 Split" : "Propose 50/50 Split"}
+                  </ActionButton>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Freelancer actions */}
