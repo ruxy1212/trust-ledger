@@ -31,7 +31,7 @@ export default function ContractPage({
   const readOnlyProgram = useReadOnlyProgram();
 
   const [contract, setContract] = useState<
-    (ContractView & { client: PublicKey; freelancer: PublicKey; amount: BN }) | null
+    (ContractView & { client: PublicKey; freelancer: PublicKey; amount: BN; tokenMint: PublicKey | null }) | null
   >(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
@@ -52,7 +52,7 @@ export default function ContractPage({
       // than anchor-codegen'd, so field types don't always line up exactly
       // with the hand-written ContractView shape below. Runtime decoding
       // (what actually matters) comes straight from the on-chain IDL either way.
-      setContract(data as unknown as ContractView & { client: PublicKey; freelancer: PublicKey; amount: BN });
+      setContract(data as unknown as ContractView & { client: PublicKey; freelancer: PublicKey; amount: BN; tokenMint: PublicKey | null });
       setLoadError(null);
     } catch {
       setLoadError("No contract found at that address.");
@@ -230,7 +230,10 @@ export default function ContractPage({
           </p>
           <p className="mt-1 text-sm text-alter-secondary">
             Client: {shortAddress(contract.client)}{publicKey && publicKey.equals(contract.client) && " (You)"} → Freelancer:{" "}
-            {shortAddress(contract.freelancer)}{publicKey && publicKey.equals(contract.freelancer) && " (You)"} · {lamportsToSol(contract.amount).toFixed(4)} SOL total
+            {shortAddress(contract.freelancer)}{publicKey && publicKey.equals(contract.freelancer) && " (You)"} ·{" "}
+            {contract.tokenMint
+              ? `${(contract.amount.toNumber() / 1_000_000).toFixed(2)} Devnet USDC`
+              : `${lamportsToSol(contract.amount).toFixed(4)} SOL`} total
           </p>
         </div>
         {!publicKey && <WalletMultiButton />}

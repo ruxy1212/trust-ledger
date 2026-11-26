@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useProgram, useReadOnlyProgram } from "@/lib/anchor-client";
 import {
   deriveContractPda,
@@ -14,9 +15,17 @@ import {
 import { solToLamportsBN, shortAddress } from "@/lib/format";
 import { fetchFreelancerOptions, FreelancerOption } from "@/lib/fetch-profiles";
 import { ReputationStat } from "@/components/ReputationStat";
+import {
+  DEVNET_USDC_MINT,
+  getAta,
+  createIdempotentAtaInstruction,
+  usdcToUnits,
+} from "@/lib/tokens";
+import BN from "bn.js";
 
 export default function HirePage() {
-  const { publicKey } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
+  const { connection } = useConnection();
   const program = useProgram();
   const readOnlyProgram = useReadOnlyProgram();
   const router = useRouter();
@@ -25,7 +34,8 @@ export default function HirePage() {
   const [mode, setMode] = useState<"dropdown" | "paste">("dropdown");
   const [selectedWallet, setSelectedWallet] = useState("");
   const [pastedAddress, setPastedAddress] = useState("");
-  const [amountSol, setAmountSol] = useState("1");
+  const [currency, setCurrency] = useState<"SOL" | "USDC">("SOL");
+  const [amountInput, setAmountInput] = useState("1");
   const [milestoneCount, setMilestoneCount] = useState(3);
   const [milestoneDescriptions, setMilestoneDescriptions] = useState<string[]>([
     "Milestone 1: Project kickoff & architecture",
@@ -62,11 +72,17 @@ export default function HirePage() {
     freelancerPubkey = null;
   }
 
-  const amount = Number(amountSol);
+  const amount = Number(amountInput);
   const isSelf = !!publicKey && !!freelancerPubkey && publicKey.equals(freelancerPubkey);
-  const isAmountTooLow = amount < 0.01;
-  const isAmountTooHigh = amount > 100;
-  const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < 0.002;
+
+  // Limits based on currency
+  const minEscrow = currency === "SOL" ? 0.01 : 1; // 0.01 SOL vs 1 USDC
+  const maxEscrow = currency === "SOL" ? 100 : 50_000; // 100 SOL vs 50,000 USDC
+  const minMilestonePayout = currency === "SOL" ? 0.002 : 0.2; // 0.002 SOL vs 0.2 USDC
+
+  const isAmountTooLow = amount < minEscrow;
+  const isAmountTooHigh = amount > maxEscrow;
+  const isMilestonePayoutTooLow = milestoneCount > 0 && amount / milestoneCount < minMilestonePayout;
   const hasValidDescriptions =
     milestoneDescriptions.length === milestoneCount &&
     milestoneDescriptions.every((d) => d.trim().length > 0 && d.trim().length <= 100);
@@ -95,22 +111,58 @@ export default function HirePage() {
       const contractPda = deriveContractPda(publicKey, freelancerPubkey, contractId);
       const vaultPda = deriveVaultPda(contractPda);
 
-      await program.methods
-        .createContract(
-          contractId,
-          solToLamportsBN(amount),
-          milestoneCount,
-          milestoneDescriptions,
-          null
-        )
-        .accounts({
-          contract: contractPda,
-          vault: vaultPda,
-          client: publicKey,
-          freelancer: freelancerPubkey,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
+      if (currency === "SOL") {
+        await program.methods
+          .createContract(
+            contractId,
+            solToLamportsBN(amount),
+            milestoneCount,
+            milestoneDescriptions,
+            null
+          )
+          .accounts({
+            contract: contractPda,
+            vault: vaultPda,
+            client: publicKey,
+            freelancer: freelancerPubkey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+      } else {
+        // USDC Multi-currency flow
+        const mint = DEVNET_USDC_MINT;
+        const clientAta = getAta(mint, publicKey, false);
+        const vaultAta = getAta(mint, vaultPda, true);
+
+        // Pre-create vault ATA if it doesn't exist
+        const tx = new Transaction().add(
+          createIdempotentAtaInstruction(publicKey, vaultAta, vaultPda, mint)
+        );
+
+        const createContractIx = await program.methods
+          .createContract(
+            contractId,
+            new BN(usdcToUnits(amount)),
+            milestoneCount,
+            milestoneDescriptions,
+            mint
+          )
+          .accounts({
+            contract: contractPda,
+            vault: vaultPda,
+            client: publicKey,
+            freelancer: freelancerPubkey,
+            tokenMint: mint,
+            clientTokenAccount: clientAta,
+            vaultTokenAccount: vaultAta,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+
+        tx.add(createContractIx);
+        await sendTransaction(tx, connection);
+      }
 
       router.push(`/contract/${contractPda.toBase58()}`);
     } catch (err) {
@@ -136,24 +188,66 @@ export default function HirePage() {
         Start a contract
       </h1>
       <p className="mt-2 text-sm text-alter-secondary">
-        Your SOL moves into an escrow vault the moment you sign. Nothing pays
+        Your funds move into an escrow vault the moment you sign. Nothing pays
         out until you approve a milestone.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-6">
+        {/* Currency Selector */}
+        <div>
+          <label className="text-sm text-alter-secondary mb-2 block font-medium">
+            Escrow Currency
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setCurrency("SOL");
+                setAmountInput("1");
+              }}
+              className={`flex items-center justify-center gap-2 rounded-md border p-3 text-sm font-medium transition cursor-pointer ${
+                currency === "SOL"
+                  ? "border-primary bg-primary/10 text-primary font-semibold"
+                  : "border-border bg-elevated text-alter-secondary hover:text-alter-primary"
+              }`}
+            >
+              <span>Native SOL</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCurrency("USDC");
+                setAmountInput("50");
+              }}
+              className={`flex items-center justify-center gap-2 rounded-md border p-3 text-sm font-medium transition cursor-pointer ${
+                currency === "USDC"
+                  ? "border-primary bg-primary/10 text-primary font-semibold"
+                  : "border-border bg-elevated text-alter-secondary hover:text-alter-primary"
+              }`}
+            >
+              <span>Devnet USDC</span>
+            </button>
+          </div>
+          {currency === "USDC" && (
+            <p className="mt-2 text-xs text-alter-muted">
+              Mint: <span className="font-mono text-alter-secondary">4zMMC9...ncDU</span> (6 decimals). Ensure you have Devnet USDC in your wallet.
+            </p>
+          )}
+        </div>
+
         <div>
           <div className="mb-2 flex gap-4 text-sm">
             <button
               type="button"
               onClick={() => setMode("dropdown")}
-              className={mode === "dropdown" ? "text-primary" : "text-alter-muted"}
+              className={mode === "dropdown" ? "text-primary font-medium" : "text-alter-muted"}
             >
               Pick a freelancer
             </button>
             <button
               type="button"
               onClick={() => setMode("paste")}
-              className={mode === "paste" ? "text-primary" : "text-alter-muted"}
+              className={mode === "paste" ? "text-primary font-medium" : "text-alter-muted"}
             >
               Paste an address instead
             </button>
@@ -213,24 +307,25 @@ export default function HirePage() {
         </div>
 
         <label className="flex flex-col gap-2 text-sm text-alter-secondary">
-          Total amount (SOL)
+          Total amount ({currency})
           <input
             type="number"
-            step="0.01"
-            min="0.01"
-            value={amountSol}
-            onChange={(e) => setAmountSol(e.target.value)}
+            step={currency === "SOL" ? "0.01" : "1"}
+            min={minEscrow}
+            max={maxEscrow}
+            value={amountInput}
+            onChange={(e) => setAmountInput(e.target.value)}
             className="rounded-md border border-border bg-elevated px-3 py-2 font-mono text-alter-primary outline-none focus-visible:border-primary"
           />
         </label>
         {isAmountTooLow && amount > 0 && (
           <p className="text-xs text-error">
-            Minimum contract escrow is 0.01 SOL (anti-farming floor).
+            Minimum contract escrow is {minEscrow} {currency} (anti-farming floor).
           </p>
         )}
         {isAmountTooHigh && (
           <p className="text-xs text-error">
-            Maximum contract escrow is 100 SOL (anti-fraud safety ceiling).
+            Maximum contract escrow is {maxEscrow.toLocaleString()} {currency} (anti-fraud safety ceiling).
           </p>
         )}
 
@@ -275,13 +370,13 @@ export default function HirePage() {
         </div>
         {isMilestonePayoutTooLow && !isAmountTooLow && (
           <p className="text-xs text-error">
-            Each milestone payout must be at least 0.002 SOL.
+            Each milestone payout must be at least {minMilestonePayout} {currency}.
           </p>
         )}
 
         {amount > 0 && milestoneCount > 0 && (
           <p className="font-mono text-xs text-alter-muted">
-            ≈ {(amount / milestoneCount).toFixed(4)} SOL per milestone
+            ≈ {(amount / milestoneCount).toFixed(currency === "SOL" ? 4 : 2)} {currency} per milestone
           </p>
         )}
 
@@ -292,7 +387,7 @@ export default function HirePage() {
           disabled={!canSubmit || status === "submitting"}
           className="neon-glow rounded-md bg-primary px-4 py-3 text-sm font-medium text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {status === "submitting" ? "Locking funds…" : "Sign & lock funds in escrow"}
+          {status === "submitting" ? "Locking funds…" : `Sign & lock ${currency} in escrow`}
         </button>
       </form>
     </div>

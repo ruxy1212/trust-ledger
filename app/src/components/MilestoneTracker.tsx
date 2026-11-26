@@ -18,6 +18,7 @@ export type ContractView = {
   disputeResolutions?: (unknown | null)[];
   basePayout: BN;
   remainder: BN;
+  tokenMint?: unknown;
 };
 
 export function MilestoneTracker({
