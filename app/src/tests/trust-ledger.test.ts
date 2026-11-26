@@ -91,7 +91,7 @@ describe("trust-ledger frontend integration", () => {
     const vaultPreBalance = await provider.connection.getBalance(vaultPda);
 
     await program.methods
-      .createContract(contractId, amount, milestoneCount, defaultDescriptions(milestoneCount))
+      .createContract(contractId, amount, milestoneCount, defaultDescriptions(milestoneCount), null)
       .accounts({
         contract: contractPda,
         vault: vaultPda,
@@ -378,7 +378,7 @@ describe("trust-ledger frontend integration", () => {
     );
 
     await program.methods
-      .createContract(optId, new BN(0.1 * LAMPORTS_PER_SOL), 1, ["Optional profile contract spec"])
+      .createContract(optId, new BN(0.1 * LAMPORTS_PER_SOL), 1, ["Optional profile contract spec"], null)
       .accounts({
         contract: optContract,
         vault: optVault,
@@ -401,7 +401,7 @@ describe("trust-ledger frontend integration", () => {
     const amount2 = new BN(0.5 * LAMPORTS_PER_SOL);
 
     await program.methods
-      .createContract(contractId2, amount2, 1, ["Second contract spec"])
+      .createContract(contractId2, amount2, 1, ["Second contract spec"], null)
       .accounts({
         contract: contract2,
         vault: vault2,
@@ -453,7 +453,7 @@ describe("trust-ledger frontend integration", () => {
     const MS_COUNT = 3;
 
     await program.methods
-      .createContract(contractId3, UNEVEN_AMOUNT, MS_COUNT, defaultDescriptions(MS_COUNT))
+      .createContract(contractId3, UNEVEN_AMOUNT, MS_COUNT, defaultDescriptions(MS_COUNT), null)
       .accounts({
         contract: contract3,
         vault: vault3,
@@ -507,7 +507,7 @@ describe("trust-ledger frontend integration", () => {
     );
 
     await program.methods
-      .createContract(contractId4, new BN(0.3 * LAMPORTS_PER_SOL), 3, defaultDescriptions(3))
+      .createContract(contractId4, new BN(0.3 * LAMPORTS_PER_SOL), 3, defaultDescriptions(3), null)
       .accounts({
         contract: contract4,
         vault: vault4,
@@ -586,7 +586,7 @@ describe("trust-ledger frontend integration", () => {
 
     try {
       await program.methods
-        .createContract(selfContractId, new BN(0.1 * LAMPORTS_PER_SOL), 1, ["Self contract"])
+        .createContract(selfContractId, new BN(0.1 * LAMPORTS_PER_SOL), 1, ["Self contract"], null)
         .accounts({
           contract: selfContract,
           vault: selfVault,
@@ -609,7 +609,7 @@ describe("trust-ledger frontend integration", () => {
 
     try {
       await program.methods
-        .createContract(tinyContractId, new BN(5_000_000), 1, ["Tiny contract"]) // 0.005 SOL < 0.01 SOL
+        .createContract(tinyContractId, new BN(5_000_000), 1, ["Tiny contract"], null) // 0.005 SOL < 0.01 SOL
         .accounts({
           contract: tinyContract,
           vault: tinyVault,
@@ -634,7 +634,7 @@ describe("trust-ledger frontend integration", () => {
       // 0.01 SOL (10_000_000) across 10 milestones gives base_payout = 1_000_000,
       // which is below MIN_MILESTONE_PAYOUT_LAMPORTS (2_000_000 = 0.002 SOL)
       await program.methods
-        .createContract(microContractId, new BN(10_000_000), 10, defaultDescriptions(10))
+        .createContract(microContractId, new BN(10_000_000), 10, defaultDescriptions(10), null)
         .accounts({
           contract: microContract,
           vault: microVault,
@@ -687,7 +687,7 @@ describe("trust-ledger frontend integration", () => {
     );
 
     await program.methods
-      .createContract(contractId4, new BN(40_000_000), 2, defaultDescriptions(2))
+      .createContract(contractId4, new BN(40_000_000), 2, defaultDescriptions(2), null)
       .accounts({
         contract: contract4,
         vault: vault4,
@@ -784,7 +784,7 @@ describe("trust-ledger frontend integration", () => {
     );
 
     await program.methods
-      .createContract(contractId5, new BN(20_000_000), 1, ["Split test spec"])
+      .createContract(contractId5, new BN(20_000_000), 1, ["Split test spec"], null)
       .accounts({
         contract: contract5,
         vault: vault5,
@@ -907,7 +907,7 @@ describe("trust-ledger frontend integration", () => {
     const CONTRACT_AMOUNT = new BN(100_000_000); // 0.1 SOL
 
     await program.methods
-      .createContract(contractId6, CONTRACT_AMOUNT, 1, ["Fee test spec"])
+      .createContract(contractId6, CONTRACT_AMOUNT, 1, ["Fee test spec"], null)
       .accounts({
         contract: contract6,
         vault: vault6,
@@ -970,7 +970,7 @@ describe("trust-ledger frontend integration", () => {
     const CONTRACT_AMOUNT = new BN(40_000_000); // 0.04 SOL
 
     await program.methods
-      .createContract(contractId7, CONTRACT_AMOUNT, 1, ["Fee split test spec"])
+      .createContract(contractId7, CONTRACT_AMOUNT, 1, ["Fee split test spec"], null)
       .accounts({
         contract: contract7,
         vault: vault7,
@@ -1095,7 +1095,7 @@ describe("trust-ledger frontend integration", () => {
 
     try {
       await program.methods
-        .createContract(testId, new BN(20_000_000), 2, ["Only 1 description"])
+        .createContract(testId, new BN(20_000_000), 2, ["Only 1 description"], null)
         .accounts({
           contract: cPda,
           vault: vPda,
@@ -1111,7 +1111,7 @@ describe("trust-ledger frontend integration", () => {
 
     try {
       await program.methods
-        .createContract(testId, new BN(20_000_000), 2, ["First valid spec", "   "])
+        .createContract(testId, new BN(20_000_000), 2, ["First valid spec", "   "], null)
         .accounts({
           contract: cPda,
           vault: vPda,
@@ -1133,7 +1133,7 @@ describe("trust-ledger frontend integration", () => {
     );
 
     await program.methods
-      .createContract(testId, new BN(20_000_000), 1, ["Valid requirement spec"])
+      .createContract(testId, new BN(20_000_000), 1, ["Valid requirement spec"], null)
       .accounts({
         contract: cPda,
         vault: vPda,
@@ -1171,7 +1171,8 @@ describe("trust-ledger frontend integration", () => {
           hugeContractId,
           new BN("100010000000"),
           1,
-          ["Escrow exceeding maximum cap"]
+          ["Escrow exceeding maximum cap"],
+          null
         )
         .accounts({
           contract: hugeContract,
@@ -1182,6 +1183,63 @@ describe("trust-ledger frontend integration", () => {
         } as any)
         .rpc();
       assert.fail("Contract exceeding maximum escrow cap should have been rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "EscrowTooLarge");
+    }
+  });
+
+  // ── Test 30 ─────────────────────────────────────────────────────────────────
+  it("30. multi-currency: validates devnet USDC escrow limits (MIN_ESCROW_USDC and MAX_ESCROW_USDC)", async () => {
+    const usdcContractId = new BN(Math.floor(Math.random() * 1_000_000));
+    const { contractPda: cPda, vaultPda: vPda } = deriveContractPdas(
+      client.publicKey, freelancer.publicKey, usdcContractId
+    );
+    const mockMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+
+    // Rejects below MIN_ESCROW_USDC (1 USDC = 1_000_000)
+    try {
+      await program.methods
+        .createContract(
+          usdcContractId,
+          new BN(500_000), // 0.5 USDC < 1 USDC
+          1,
+          ["USDC contract description"],
+          mockMint
+        )
+        .accounts({
+          contract: cPda,
+          vault: vPda,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          tokenMint: mockMint,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("USDC contract below 1 USDC should be rejected");
+    } catch (err: any) {
+      assert.include(err.toString(), "EscrowTooSmall");
+    }
+
+    // Rejects above MAX_ESCROW_USDC (50,000 USDC = 50_000_000_000)
+    try {
+      await program.methods
+        .createContract(
+          usdcContractId,
+          new BN("50001000000"), // 50,001 USDC
+          1,
+          ["USDC contract description"],
+          mockMint
+        )
+        .accounts({
+          contract: cPda,
+          vault: vPda,
+          client: client.publicKey,
+          freelancer: freelancer.publicKey,
+          tokenMint: mockMint,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc();
+      assert.fail("USDC contract above 50,000 USDC should be rejected");
     } catch (err: any) {
       assert.include(err.toString(), "EscrowTooLarge");
     }

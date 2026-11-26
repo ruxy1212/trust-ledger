@@ -100,7 +100,8 @@ export default function HirePage() {
           contractId,
           solToLamportsBN(amount),
           milestoneCount,
-          milestoneDescriptions
+          milestoneDescriptions,
+          null
         )
         .accounts({
           contract: contractPda,

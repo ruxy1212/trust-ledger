@@ -149,6 +149,29 @@
           "name": "fee_recipient",
           "writable": true,
           "optional": true
+        },
+        {
+          "name": "token_mint",
+          "optional": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "freelancer_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "fee_token_recipient",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "payment_token_program",
+          "optional": true
         }
       ],
       "args": [
@@ -235,6 +258,24 @@
           "name": "freelancer"
         },
         {
+          "name": "token_mint",
+          "optional": true
+        },
+        {
+          "name": "client_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "optional": true
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -256,6 +297,12 @@
           "name": "milestone_descriptions",
           "type": {
             "vec": "string"
+          }
+        },
+        {
+          "name": "token_mint",
+          "type": {
+            "option": "pubkey"
           }
         }
       ]
@@ -506,6 +553,34 @@
         {
           "name": "fee_recipient",
           "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_mint",
+          "optional": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "client_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "freelancer_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "fee_token_recipient",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "payment_token_program",
           "optional": true
         }
       ],
@@ -894,6 +969,16 @@
       "code": 6026,
       "name": "MilestonePayoutTooLarge",
       "msg": "Milestone payout exceeds maximum allowed safety ceiling"
+    },
+    {
+      "code": 6027,
+      "name": "TokenAccountRequired",
+      "msg": "Token account required when contract uses SPL token"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidTokenMint",
+      "msg": "Invalid token mint for contract"
     }
   ],
   "types": [
@@ -909,6 +994,12 @@
           {
             "name": "freelancer",
             "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
             "name": "amount",

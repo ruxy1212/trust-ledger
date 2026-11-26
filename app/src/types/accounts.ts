@@ -67,6 +67,7 @@ export type DisputeResolution =
 export interface ContractAccount {
   client: PublicKey;
   freelancer: PublicKey;
+  tokenMint: PublicKey | null;
   amount: BN;
   milestoneCount: number;
   basePayout: BN;
