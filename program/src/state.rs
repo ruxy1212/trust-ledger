@@ -41,6 +41,7 @@ pub struct ReputationRecord {
 pub struct Contract {
     pub client: Pubkey,
     pub freelancer: Pubkey,
+    pub token_mint: Option<Pubkey>,
     pub amount: u64,
     pub milestone_count: u8,
     pub base_payout: u64,

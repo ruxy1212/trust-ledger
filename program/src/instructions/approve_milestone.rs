@@ -38,13 +38,7 @@ pub struct ApproveMilestone<'info> {
     )]
     pub reputation: Account<'info, ReputationRecord>,
 
-    /// CHECK: PDA badge mint, seeded on the freelancer's own wallet. On a
-    /// freelancer's first-ever approved milestone this account does not
-    /// exist yet and is created + initialized by hand inside the handler
-    /// (see `crate::badge::mint_badge`) — Anchor's `init` constraint can't
-    /// express a Token-2022 mint with the NonTransferable extension. On
-    /// every later approval (for this freelancer, across any contract) the
-    /// account already exists and this instruction leaves it untouched.
+    /// CHECK: PDA badge mint, seeded on the freelancer's own wallet.
     #[account(
         mut,
         seeds = [BADGE_SEED, freelancer.key().as_ref()],
@@ -53,8 +47,6 @@ pub struct ApproveMilestone<'info> {
     pub badge_mint: UncheckedAccount<'info>,
 
     /// CHECK: the freelancer's associated token account for `badge_mint`.
-    /// Verified against the real ATA derivation below rather than trusted
-    /// blindly, since it's the client's wallet supplying this account.
     #[account(
         mut,
         constraint = badge_token_account.key() == spl_associated_token_account::get_associated_token_address_with_program_id(
@@ -81,6 +73,24 @@ pub struct ApproveMilestone<'info> {
     /// CHECK: Optional fee recipient account, verified if config has fees enabled
     #[account(mut)]
     pub fee_recipient: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional token mint account for SPL token contracts
+    pub token_mint: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional vault token account for SPL token contracts
+    #[account(mut)]
+    pub vault_token_account: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional freelancer token account for SPL token contracts
+    #[account(mut)]
+    pub freelancer_token_account: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional fee recipient token account for SPL token contracts
+    #[account(mut)]
+    pub fee_token_recipient: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional SPL token program for payment transfers (e.g. SPL Token or Token-2022)
+    pub payment_token_program: Option<UncheckedAccount<'info>>,
 }
 
 pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
@@ -122,25 +132,82 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
         &[vault_bump],
     ]];
 
-    let cpi_ctx = CpiContext::new(
-        ctx.accounts.system_program.key(),
-        Transfer {
-            from: ctx.accounts.vault.to_account_info(),
-            to: ctx.accounts.freelancer.to_account_info(),
-        },
-    ).with_signer(vault_signer_seeds);
-    transfer(cpi_ctx, freelancer_payout)?;
+    if let Some(mint_key) = contract.token_mint {
+        let vault_ta = ctx.accounts.vault_token_account.as_ref()
+            .ok_or(CapstoneError::TokenAccountRequired)?;
+        let freelancer_ta = ctx.accounts.freelancer_token_account.as_ref()
+            .ok_or(CapstoneError::TokenAccountRequired)?;
+        let payment_prog = ctx.accounts.payment_token_program.as_ref()
+            .ok_or(CapstoneError::TokenAccountRequired)?;
 
-    if fee_payout > 0 {
-        let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
-        let fee_cpi = CpiContext::new(
+        let ix = spl_token_2022::instruction::transfer_checked(
+            payment_prog.key,
+            vault_ta.key,
+            &mint_key,
+            freelancer_ta.key,
+            ctx.accounts.vault.key,
+            &[],
+            freelancer_payout,
+            6,
+        ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+        anchor_lang::solana_program::program::invoke_signed(
+            &ix,
+            &[
+                vault_ta.to_account_info(),
+                ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                freelancer_ta.to_account_info(),
+                ctx.accounts.vault.to_account_info(),
+            ],
+            vault_signer_seeds,
+        )?;
+
+        if fee_payout > 0 {
+            let fee_ta = ctx.accounts.fee_token_recipient.as_ref()
+                .ok_or(CapstoneError::TokenAccountRequired)?;
+            let fee_ix = spl_token_2022::instruction::transfer_checked(
+                payment_prog.key,
+                vault_ta.key,
+                &mint_key,
+                fee_ta.key,
+                ctx.accounts.vault.key,
+                &[],
+                fee_payout,
+                6,
+            ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+            anchor_lang::solana_program::program::invoke_signed(
+                &fee_ix,
+                &[
+                    vault_ta.to_account_info(),
+                    ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                    fee_ta.to_account_info(),
+                    ctx.accounts.vault.to_account_info(),
+                ],
+                vault_signer_seeds,
+            )?;
+        }
+    } else {
+        let cpi_ctx = CpiContext::new(
             ctx.accounts.system_program.key(),
             Transfer {
                 from: ctx.accounts.vault.to_account_info(),
-                to: recipient.to_account_info(),
+                to: ctx.accounts.freelancer.to_account_info(),
             },
         ).with_signer(vault_signer_seeds);
-        transfer(fee_cpi, fee_payout)?;
+        transfer(cpi_ctx, freelancer_payout)?;
+
+        if fee_payout > 0 {
+            let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
+            let fee_cpi = CpiContext::new(
+                ctx.accounts.system_program.key(),
+                Transfer {
+                    from: ctx.accounts.vault.to_account_info(),
+                    to: recipient.to_account_info(),
+                },
+            ).with_signer(vault_signer_seeds);
+            transfer(fee_cpi, fee_payout)?;
+        }
     }
 
     // Check BEFORE incrementing: this is that freelancer's first-ever
@@ -150,7 +217,7 @@ pub fn handler(ctx: Context<ApproveMilestone>, index: u8) -> Result<()> {
     let reputation = &mut ctx.accounts.reputation;
     reputation.completed_count += 1;
     reputation.earned_volume = reputation.earned_volume.saturating_add(payout);
-    // Value-weighted score: 100 base points per approved milestone + 1 point per 100,000 lamports (0.0001 SOL) earned
+    // Value-weighted score: 100 base points per approved milestone + 1 point per 100,000 units earned
     let volume_bonus = payout / 100_000;
     reputation.reputation_score = reputation.reputation_score.saturating_add(100 + volume_bonus);
 

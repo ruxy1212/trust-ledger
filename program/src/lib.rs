@@ -26,8 +26,9 @@ pub mod trust_ledger {
         amount: u64,
         milestone_count: u8,
         milestone_descriptions: Vec<String>,
+        token_mint: Option<Pubkey>,
     ) -> Result<()> {
-        create_contract::handler(ctx, contract_id, amount, milestone_count, milestone_descriptions)
+        create_contract::handler(ctx, contract_id, amount, milestone_count, milestone_descriptions, token_mint)
     }
 
     pub fn submit_milestone(

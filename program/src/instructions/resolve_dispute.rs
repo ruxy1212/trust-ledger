@@ -75,6 +75,28 @@ pub struct ResolveDispute<'info> {
     /// CHECK: Optional protocol fee recipient account
     #[account(mut)]
     pub fee_recipient: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional token mint account for SPL token contracts
+    pub token_mint: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional vault token account for SPL token contracts
+    #[account(mut)]
+    pub vault_token_account: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional client token account for SPL token contracts
+    #[account(mut)]
+    pub client_token_account: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional freelancer token account for SPL token contracts
+    #[account(mut)]
+    pub freelancer_token_account: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional fee recipient token account for SPL token contracts
+    #[account(mut)]
+    pub fee_token_recipient: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: Optional SPL token program for payment transfers
+    pub payment_token_program: Option<UncheckedAccount<'info>>,
 }
 
 pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResolution) -> Result<()> {
@@ -99,13 +121,14 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
 
     let should_execute = if is_client_release || is_freelancer_refund {
         true
-    } else if contract.dispute_resolutions[index as usize] == Some(resolution) {
-        // Both parties agreed on this resolution
-        true
     } else {
-        // Record proposal and wait for other party
-        contract.dispute_resolutions[index as usize] = Some(resolution);
-        false
+        match contract.dispute_resolutions[index as usize] {
+            Some(existing_proposal) => existing_proposal == resolution,
+            None => {
+                contract.dispute_resolutions[index as usize] = Some(resolution);
+                false
+            }
+        }
     };
 
     if !should_execute {
@@ -142,25 +165,82 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
                 (payout, 0)
             };
 
-            let cpi_ctx = CpiContext::new(
-                ctx.accounts.system_program.key(),
-                Transfer {
-                    from: ctx.accounts.vault.to_account_info(),
-                    to: ctx.accounts.freelancer.to_account_info(),
-                },
-            ).with_signer(vault_signer_seeds);
-            transfer(cpi_ctx, freelancer_payout)?;
+            if let Some(mint_key) = contract.token_mint {
+                let vault_ta = ctx.accounts.vault_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let freelancer_ta = ctx.accounts.freelancer_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let payment_prog = ctx.accounts.payment_token_program.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
 
-            if fee_payout > 0 {
-                let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
-                let fee_cpi = CpiContext::new(
+                let ix = spl_token_2022::instruction::transfer_checked(
+                    payment_prog.key,
+                    vault_ta.key,
+                    &mint_key,
+                    freelancer_ta.key,
+                    ctx.accounts.vault.key,
+                    &[],
+                    freelancer_payout,
+                    6,
+                ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+                anchor_lang::solana_program::program::invoke_signed(
+                    &ix,
+                    &[
+                        vault_ta.to_account_info(),
+                        ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                        freelancer_ta.to_account_info(),
+                        ctx.accounts.vault.to_account_info(),
+                    ],
+                    vault_signer_seeds,
+                )?;
+
+                if fee_payout > 0 {
+                    let fee_ta = ctx.accounts.fee_token_recipient.as_ref()
+                        .ok_or(CapstoneError::TokenAccountRequired)?;
+                    let fee_ix = spl_token_2022::instruction::transfer_checked(
+                        payment_prog.key,
+                        vault_ta.key,
+                        &mint_key,
+                        fee_ta.key,
+                        ctx.accounts.vault.key,
+                        &[],
+                        fee_payout,
+                        6,
+                    ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+                    anchor_lang::solana_program::program::invoke_signed(
+                        &fee_ix,
+                        &[
+                            vault_ta.to_account_info(),
+                            ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                            fee_ta.to_account_info(),
+                            ctx.accounts.vault.to_account_info(),
+                        ],
+                        vault_signer_seeds,
+                    )?;
+                }
+            } else {
+                let cpi_ctx = CpiContext::new(
                     ctx.accounts.system_program.key(),
                     Transfer {
                         from: ctx.accounts.vault.to_account_info(),
-                        to: recipient.to_account_info(),
+                        to: ctx.accounts.freelancer.to_account_info(),
                     },
                 ).with_signer(vault_signer_seeds);
-                transfer(fee_cpi, fee_payout)?;
+                transfer(cpi_ctx, freelancer_payout)?;
+
+                if fee_payout > 0 {
+                    let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
+                    let fee_cpi = CpiContext::new(
+                        ctx.accounts.system_program.key(),
+                        Transfer {
+                            from: ctx.accounts.vault.to_account_info(),
+                            to: recipient.to_account_info(),
+                        },
+                    ).with_signer(vault_signer_seeds);
+                    transfer(fee_cpi, fee_payout)?;
+                }
             }
 
             contract.milestones[index as usize] = MilestoneStatus::ResolvedRelease;
@@ -188,14 +268,45 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
             }
         }
         DisputeResolution::RefundToClient => {
-            let cpi_ctx = CpiContext::new(
-                ctx.accounts.system_program.key(),
-                Transfer {
-                    from: ctx.accounts.vault.to_account_info(),
-                    to: ctx.accounts.client.to_account_info(),
-                },
-            ).with_signer(vault_signer_seeds);
-            transfer(cpi_ctx, payout)?;
+            if let Some(mint_key) = contract.token_mint {
+                let vault_ta = ctx.accounts.vault_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let client_ta = ctx.accounts.client_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let payment_prog = ctx.accounts.payment_token_program.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+
+                let ix = spl_token_2022::instruction::transfer_checked(
+                    payment_prog.key,
+                    vault_ta.key,
+                    &mint_key,
+                    client_ta.key,
+                    ctx.accounts.vault.key,
+                    &[],
+                    payout,
+                    6,
+                ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+                anchor_lang::solana_program::program::invoke_signed(
+                    &ix,
+                    &[
+                        vault_ta.to_account_info(),
+                        ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                        client_ta.to_account_info(),
+                        ctx.accounts.vault.to_account_info(),
+                    ],
+                    vault_signer_seeds,
+                )?;
+            } else {
+                let cpi_ctx = CpiContext::new(
+                    ctx.accounts.system_program.key(),
+                    Transfer {
+                        from: ctx.accounts.vault.to_account_info(),
+                        to: ctx.accounts.client.to_account_info(),
+                    },
+                ).with_signer(vault_signer_seeds);
+                transfer(cpi_ctx, payout)?;
+            }
 
             contract.milestones[index as usize] = MilestoneStatus::ResolvedRefund;
             contract.dispute_resolutions[index as usize] = None;
@@ -220,38 +331,123 @@ pub fn handler(ctx: Context<ResolveDispute>, index: u8, resolution: DisputeResol
                 (raw_freelancer_share, 0)
             };
 
-            if freelancer_share > 0 {
-                let cpi_freelancer = CpiContext::new(
-                    ctx.accounts.system_program.key(),
-                    Transfer {
-                        from: ctx.accounts.vault.to_account_info(),
-                        to: ctx.accounts.freelancer.to_account_info(),
-                    },
-                ).with_signer(vault_signer_seeds);
-                transfer(cpi_freelancer, freelancer_share)?;
-            }
+            if let Some(mint_key) = contract.token_mint {
+                let vault_ta = ctx.accounts.vault_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let client_ta = ctx.accounts.client_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let freelancer_ta = ctx.accounts.freelancer_token_account.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
+                let payment_prog = ctx.accounts.payment_token_program.as_ref()
+                    .ok_or(CapstoneError::TokenAccountRequired)?;
 
-            if fee_payout > 0 {
-                let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
-                let fee_cpi = CpiContext::new(
-                    ctx.accounts.system_program.key(),
-                    Transfer {
-                        from: ctx.accounts.vault.to_account_info(),
-                        to: recipient.to_account_info(),
-                    },
-                ).with_signer(vault_signer_seeds);
-                transfer(fee_cpi, fee_payout)?;
-            }
+                if freelancer_share > 0 {
+                    let ix = spl_token_2022::instruction::transfer_checked(
+                        payment_prog.key,
+                        vault_ta.key,
+                        &mint_key,
+                        freelancer_ta.key,
+                        ctx.accounts.vault.key,
+                        &[],
+                        freelancer_share,
+                        6,
+                    ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
 
-            if client_share > 0 {
-                let cpi_client = CpiContext::new(
-                    ctx.accounts.system_program.key(),
-                    Transfer {
-                        from: ctx.accounts.vault.to_account_info(),
-                        to: ctx.accounts.client.to_account_info(),
-                    },
-                ).with_signer(vault_signer_seeds);
-                transfer(cpi_client, client_share)?;
+                    anchor_lang::solana_program::program::invoke_signed(
+                        &ix,
+                        &[
+                            vault_ta.to_account_info(),
+                            ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                            freelancer_ta.to_account_info(),
+                            ctx.accounts.vault.to_account_info(),
+                        ],
+                        vault_signer_seeds,
+                    )?;
+                }
+
+                if fee_payout > 0 {
+                    let fee_ta = ctx.accounts.fee_token_recipient.as_ref()
+                        .ok_or(CapstoneError::TokenAccountRequired)?;
+                    let fee_ix = spl_token_2022::instruction::transfer_checked(
+                        payment_prog.key,
+                        vault_ta.key,
+                        &mint_key,
+                        fee_ta.key,
+                        ctx.accounts.vault.key,
+                        &[],
+                        fee_payout,
+                        6,
+                    ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+                    anchor_lang::solana_program::program::invoke_signed(
+                        &fee_ix,
+                        &[
+                            vault_ta.to_account_info(),
+                            ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                            fee_ta.to_account_info(),
+                            ctx.accounts.vault.to_account_info(),
+                        ],
+                        vault_signer_seeds,
+                    )?;
+                }
+
+                if client_share > 0 {
+                    let client_ix = spl_token_2022::instruction::transfer_checked(
+                        payment_prog.key,
+                        vault_ta.key,
+                        &mint_key,
+                        client_ta.key,
+                        ctx.accounts.vault.key,
+                        &[],
+                        client_share,
+                        6,
+                    ).map_err(|_| CapstoneError::BadgeSetupFailed)?;
+
+                    anchor_lang::solana_program::program::invoke_signed(
+                        &client_ix,
+                        &[
+                            vault_ta.to_account_info(),
+                            ctx.accounts.token_mint.as_ref().unwrap().to_account_info(),
+                            client_ta.to_account_info(),
+                            ctx.accounts.vault.to_account_info(),
+                        ],
+                        vault_signer_seeds,
+                    )?;
+                }
+            } else {
+                if freelancer_share > 0 {
+                    let cpi_freelancer = CpiContext::new(
+                        ctx.accounts.system_program.key(),
+                        Transfer {
+                            from: ctx.accounts.vault.to_account_info(),
+                            to: ctx.accounts.freelancer.to_account_info(),
+                        },
+                    ).with_signer(vault_signer_seeds);
+                    transfer(cpi_freelancer, freelancer_share)?;
+                }
+
+                if fee_payout > 0 {
+                    let recipient = ctx.accounts.fee_recipient.as_ref().unwrap();
+                    let fee_cpi = CpiContext::new(
+                        ctx.accounts.system_program.key(),
+                        Transfer {
+                            from: ctx.accounts.vault.to_account_info(),
+                            to: recipient.to_account_info(),
+                        },
+                    ).with_signer(vault_signer_seeds);
+                    transfer(fee_cpi, fee_payout)?;
+                }
+
+                if client_share > 0 {
+                    let cpi_client = CpiContext::new(
+                        ctx.accounts.system_program.key(),
+                        Transfer {
+                            from: ctx.accounts.vault.to_account_info(),
+                            to: ctx.accounts.client.to_account_info(),
+                        },
+                    ).with_signer(vault_signer_seeds);
+                    transfer(cpi_client, client_share)?;
+                }
             }
 
             contract.milestones[index as usize] = MilestoneStatus::ResolvedSplit;

@@ -56,5 +56,9 @@ pub enum CapstoneError {
     EscrowTooLarge,
     #[msg("Milestone payout exceeds maximum allowed safety ceiling")]
     MilestonePayoutTooLarge,
+    #[msg("Token account required when contract uses SPL token")]
+    TokenAccountRequired,
+    #[msg("Invalid token mint for contract")]
+    InvalidTokenMint,
 }
 
